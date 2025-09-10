@@ -2,17 +2,89 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapIcon, StarIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
+import dataService from '../services/dataService'
+import adminService from '../services/adminService'
 
 const LandingPage = () => {
   const navigate = useNavigate()
   const [counties] = useState([
-    // Currently available: Hernando County
-    { name: 'Hernando County', parcels: 45123, searches: 234, available: true, path: '/hernando' },
-    // Coming soon - other counties for Walton Global
-    { name: 'Manatee County', parcels: 32156, searches: 187, available: false },
-    { name: 'Pasco County', parcels: 28987, searches: 156, available: false },
-    { name: 'Citrus County', parcels: 18432, searches: 89, available: false },
+    // Counties ordered by priority for Walton Global
+    // Parcel counts reflect actual GeoJSON data where available
+    { name: 'Pasco County', parcels: 28987, available: false }, // Estimated - no GeoJSON yet
+    { name: 'Polk County', parcels: 68542, available: false }, // Estimated - no GeoJSON yet  
+    { name: 'Hernando County', parcels: 37, available: true, path: '/hernando' }, // Actual count from GeoJSON
+    { name: 'Citrus County', parcels: 18432, available: false }, // Estimated - no GeoJSON yet
+    { name: 'Manatee County', parcels: 12, available: true, path: '/manatee' }, // Actual count from GeoJSON
   ])
+
+  // Stats calculated from actual GeoJSON data
+  const [stats, setStats] = useState({
+    totalParcels: 0,
+    totalAcres: 0,
+    avgAcreage: 0,
+    loading: true
+  })
+
+  // Admin checking
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Check admin status
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const adminStatus = await adminService.isAdmin()
+      setIsAdmin(adminStatus)
+      console.log('LandingPage: Admin status:', adminStatus)
+    }
+    checkAdminStatus()
+  }, [])
+
+  // Calculate stats from available county data on component mount
+  useEffect(() => {
+    const calculateStats = async () => {
+      try {
+        let totalAcres = 0
+        let totalParcels = 0
+
+        // Load Hernando data
+        const hernandoData = await dataService.loadHernandoParcels()
+        if (hernandoData) {
+          hernandoData.features.forEach(feature => {
+            const acres = parseFloat(feature.properties.ACRES)
+            if (!isNaN(acres) && acres > 0) {
+              totalAcres += acres
+              totalParcels++
+            }
+          })
+        }
+
+        // Load Manatee data
+        const manateeData = await dataService.loadManateeParcels()
+        if (manateeData) {
+          manateeData.features.forEach(feature => {
+            const acres = parseFloat(feature.properties.LAND_ACREAGE_CAMA)
+            if (!isNaN(acres) && acres > 0) {
+              totalAcres += acres
+              totalParcels++
+            }
+          })
+        }
+
+        const avgAcreage = totalParcels > 0 ? totalAcres / totalParcels : 0
+
+        setStats({
+          totalParcels,
+          totalAcres,
+          avgAcreage,
+          loading: false
+        })
+      } catch (error) {
+        console.error('Error calculating stats:', error)
+        setStats(prev => ({ ...prev, loading: false }))
+      }
+    }
+
+    calculateStats()
+  }, [])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -63,7 +135,7 @@ const LandingPage = () => {
         {/* Stats Section */}
         <motion.div 
           variants={containerVariants}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
         >
           <motion.div variants={itemVariants} className="card text-center">
             <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -84,13 +156,25 @@ const LandingPage = () => {
           </motion.div>
 
           <motion.div variants={itemVariants} className="card text-center">
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <StarIcon className="w-6 h-6 text-yellow-600" />
+            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="text-amber-600 text-xl font-bold">🏞️</div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Searches Complete</h3>
-            <p className="text-3xl font-bold text-yellow-600">
-              {counties.reduce((sum, county) => sum + county.searches, 0)}
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Acreage</h3>
+            <p className="text-3xl font-bold text-amber-600">
+              {stats.loading ? '...' : `${stats.totalAcres.toLocaleString(undefined, {maximumFractionDigits: 0})}`}
             </p>
+            <p className="text-sm text-gray-500 mt-1">From live data</p>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="card text-center">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="text-purple-600 text-xl font-bold">📏</div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Avg Parcel Size</h3>
+            <p className="text-3xl font-bold text-purple-600">
+              {stats.loading ? '...' : `${stats.avgAcreage.toFixed(1)}`}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">Acres per parcel</p>
           </motion.div>
         </motion.div>
 
@@ -145,12 +229,6 @@ const LandingPage = () => {
                       {county.parcels.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Completed Searches:</span>
-                    <span className={`font-medium ${county.available ? 'text-gray-900' : 'text-gray-500'}`}>
-                      {county.searches}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-200">
@@ -182,6 +260,19 @@ const LandingPage = () => {
             <StarIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p>No recent activity to display</p>
             <p className="text-sm mt-2">Start exploring county maps to see your activity here</p>
+            
+            {/* Temporary Admin Access - Remove once navbar is working */}
+            {isAdmin && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700"
+                >
+                  🛠️ Admin Dashboard (Temporary Link)
+                </button>
+                <p className="text-xs text-red-600 mt-1">Admin access detected</p>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       </div>

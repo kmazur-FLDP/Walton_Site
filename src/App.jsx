@@ -4,6 +4,9 @@ import LoginPage from './pages/LoginPage'
 import LandingPage from './pages/LandingPage'
 import MapPage from './pages/MapPage'
 import HernandoMapPage from './pages/HernandoMapPage'
+import ManateeMapPage from './pages/ManateeMapPage'
+import FavoritesPage from './pages/FavoritesPage'
+import AdminDashboard from './pages/AdminDashboard'
 import Navbar from './components/Navbar'
 import LoadingSpinner from './components/LoadingSpinner'
 
@@ -73,6 +76,30 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <HernandoMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manatee"
+          element={
+            <ProtectedRoute>
+              <ManateeMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <FavoritesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

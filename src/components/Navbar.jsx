@@ -1,12 +1,26 @@
-import { Fragment } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Disclosure, Menu, Transition } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
+import adminService from '../services/adminService'
 
 const Navbar = () => {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        console.log('Checking admin status for user:', user.email)
+        const adminStatus = await adminService.isAdmin()
+        console.log('Admin status result:', adminStatus)
+        setIsAdmin(adminStatus)
+      }
+    }
+    checkAdminStatus()
+  }, [user])
 
   const handleSignOut = async () => {
     const { error } = await signOut()
@@ -40,6 +54,20 @@ const Navbar = () => {
                   >
                     Dashboard
                   </button>
+                  <button
+                    onClick={() => navigate('/favorites')}
+                    className="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    Favorites
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => navigate('/admin')}
+                      className="text-red-700 hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors"
+                    >
+                      Admin
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -110,6 +138,20 @@ const Navbar = () => {
               >
                 Dashboard
               </button>
+              <button
+                onClick={() => navigate('/favorites')}
+                className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 w-full text-left"
+              >
+                Favorites
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="block pl-3 pr-4 py-2 text-base font-medium text-red-700 hover:text-red-600 hover:bg-red-50 w-full text-left"
+                >
+                  Admin
+                </button>
+              )}
               <div className="border-t pt-4 pb-3">
                 <div className="px-4 text-sm text-gray-500">{user?.email}</div>
                 <button

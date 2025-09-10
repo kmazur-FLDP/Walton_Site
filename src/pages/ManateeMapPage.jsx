@@ -16,35 +16,44 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-const HernandoMapPage = () => {
+const ManateeMapPage = () => {
   const navigate = useNavigate()
   const mapRef = useRef()
   const [favorites, setFavorites] = useState(new Set())
   const [selectedParcel, setSelectedParcel] = useState(null)
   const [loading, setLoading] = useState(true)
   const [parcelData, setParcelData] = useState(null)
+  const [boundaryData, setBoundaryData] = useState(null)
   const [error, setError] = useState(null)
   const [parcelCount, setParcelCount] = useState(0)
   const [mapReady, setMapReady] = useState(false)
 
-  // Load Hernando parcel data when component mounts
+  // Load Manatee parcel and boundary data when component mounts
   useEffect(() => {
     const loadMapData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        console.log('Loading Hernando parcel data...')
-        const parcels = await dataService.loadHernandoParcels()
+        console.log('Loading Manatee data...')
         
+        // Load parcels
+        const parcels = await dataService.loadManateeParcels()
         if (parcels) {
           console.log('Loaded parcels:', parcels.features?.length || 0)
           setParcelData(parcels)
           setParcelCount(parcels.features?.length || 0)
-          
-          // The zoom will be handled by the useEffect when mapReady && parcelData are both true
         } else {
-          setError('Failed to load Hernando parcel data')
+          setError('Failed to load Manatee parcel data')
+        }
+
+        // Load future development boundary
+        const boundary = await dataService.loadManateeFutureDevelopment()
+        if (boundary) {
+          console.log('Loaded future development boundary:', boundary.features?.length || 0, 'features')
+          setBoundaryData(boundary)
+        } else {
+          console.log('Future development boundary not available')
         }
 
       } catch (err) {
@@ -58,12 +67,12 @@ const HernandoMapPage = () => {
     loadMapData()
   }, [])
 
-  // Load user favorites for Hernando county
+  // Load user favorites for Manatee county
   useEffect(() => {
     const loadFavorites = async () => {
       try {
-        console.log('Loading Hernando favorites...')
-        const userFavorites = await favoritesService.getFavoritesByCounty('Hernando')
+        console.log('Loading Manatee favorites...')
+        const userFavorites = await favoritesService.getFavoritesByCounty('Manatee')
         const favoriteIds = new Set(userFavorites.map(fav => fav.parcel_id))
         setFavorites(favoriteIds)
         console.log('Loaded favorites:', favoriteIds.size)
@@ -90,7 +99,7 @@ const HernandoMapPage = () => {
       const parcelAddress = parcel?.properties?.SITUS_ADDRESS || null
 
       // Toggle in database
-      const isNowFavorited = await favoritesService.toggleFavorite(parcelId, 'Hernando', parcelAddress)
+      const isNowFavorited = await favoritesService.toggleFavorite(parcelId, 'Manatee', parcelAddress)
       
       // Update local state
       const newFavorites = new Set(favorites)
@@ -134,6 +143,18 @@ const HernandoMapPage = () => {
       setTimeout(zoomToParcelBounds, 100)
     }
   }
+
+  // Boundary styling function
+  const boundaryStyle = () => {
+    return {
+      fillColor: 'transparent', // No fill, just outline
+      weight: 3,
+      opacity: 1,
+      color: '#dc2626', // Red border
+      dashArray: '10, 5', // Dashed line
+      fillOpacity: 0
+    };
+  };
 
   // Parcel styling function
   const parcelStyle = (feature) => {
@@ -230,7 +251,7 @@ const HernandoMapPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Hernando County parcels...</p>
+          <p className="mt-4 text-gray-600">Loading Manatee County parcels...</p>
         </div>
       </div>
     )
@@ -264,7 +285,7 @@ const HernandoMapPage = () => {
                 Back to Dashboard
               </button>
               <div className="h-6 border-l border-gray-300"></div>
-              <h1 className="text-2xl font-bold text-gray-900">Hernando County Parcels</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Manatee County Parcels</h1>
               <span className="bg-primary-100 text-primary-800 text-sm font-medium px-2.5 py-0.5 rounded">
                 {parcelCount.toLocaleString()} parcels
               </span>
@@ -296,7 +317,7 @@ const HernandoMapPage = () => {
       <div className="h-[calc(100vh-80px)]">
         <MapContainer
           ref={mapRef}
-          center={[28.5584, -82.4511]} // Hernando County center
+          center={[27.4989, -82.5748]} // Manatee County center
           zoom={10}
           style={{ height: '100%', width: '100%' }}
           className="z-0"
@@ -315,75 +336,28 @@ const HernandoMapPage = () => {
             opacity={0.9}
           />
 
-          {/* 
-          ESRI SOLUTIONS - Professional mapping with consistent styling:
-          
-          Current: World Transportation (Roads + Labels)
-          - Clean roads, highways, and place names
-          - Designed specifically for overlay on imagery
-          
-          Option 1: World Boundaries and Places (Labels only)
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-            opacity={0.8}
-          />
-
-          Option 2: World Reference Overlay (Most comprehensive)
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-            opacity={0.8}
-          />
-
-          Option 3: USA Topo Maps Reference (US-specific, detailed)
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-            opacity={0.4}
-          />
-
-          ALTERNATIVE BASEMAP COMBINATIONS:
-
-          Option 4: Esri World Topo + No Overlay (Clean topo style)
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-          />
-
-          Option 5: Esri World Street Map + Imagery Hybrid
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-            opacity={0.7}
-          />
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-            opacity={0.4}
-          />
-
-          NON-ESRI ALTERNATIVES:
-          
-          CartoDB Voyager Labels
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
-            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-            opacity={0.8}
-          />
-
-          Stamen Toner Lines (Minimalist)
-          <TileLayer
-            url="http://tile.stamen.com/toner-lines/{z}/{x}/{y}.png"
-            attribution='Map tiles by Stamen Design, CC BY 3.0'
-            opacity={0.7}
-          />
-          */}
+          {/* Future Development Boundary layer */}
+          {boundaryData && (
+            <GeoJSON
+              key="manatee-boundary"
+              data={boundaryData}
+              style={boundaryStyle}
+              onEachFeature={(feature, layer) => {
+                // Add popup for boundary info
+                layer.bindPopup(`
+                  <div class="p-3">
+                    <h3 class="font-semibold text-base mb-2">Future Development Boundary</h3>
+                    <p class="text-sm text-gray-600">Manatee County planned development area</p>
+                  </div>
+                `)
+              }}
+            />
+          )}
 
           {/* Parcel data layer */}
           {parcelData && (
             <GeoJSON
-              key="hernando-parcels"
+              key="manatee-parcels"
               data={parcelData}
               style={parcelStyle}
               onEachFeature={onEachFeature}
@@ -413,10 +387,14 @@ const HernandoMapPage = () => {
             <div className="w-4 h-4 bg-amber-500 border border-amber-600 rounded"></div>
             <span>Favorited Parcels</span>
           </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-1 bg-red-600" style={{borderStyle: 'dashed', borderWidth: '1px', borderColor: '#dc2626'}}></div>
+            <span>Future Development Boundary</span>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-export default HernandoMapPage
+export default ManateeMapPage
