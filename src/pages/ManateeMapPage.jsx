@@ -5,6 +5,7 @@ import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outl
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
+import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -27,6 +28,8 @@ const ManateeMapPage = () => {
   const [error, setError] = useState(null)
   const [parcelCount, setParcelCount] = useState(0)
   const [mapReady, setMapReady] = useState(false)
+  const [showPanel, setShowPanel] = useState(false)
+  const [panelParcel, setPanelParcel] = useState(null)
 
   // Load Manatee parcel and boundary data when component mounts
   useEffect(() => {
@@ -192,59 +195,30 @@ const ManateeMapPage = () => {
   const onEachFeature = (feature, layer) => {
     const props = feature.properties
     
-    // Create popup content
-    const popupContent = `
-      <div class="p-3 min-w-64">
-        <h3 class="font-semibold text-base mb-2">${props.SITUS_ADDRESS || 'Unknown Address'}</h3>
-        <div class="space-y-1 text-sm">
-          <div><span class="font-medium">Parcel Number:</span> ${props.PARCEL_NUMBER || 'N/A'}</div>
-          <div><span class="font-medium">Owner:</span> ${props.OWNER_NAME || 'Unknown'}</div>
-          <div><span class="font-medium">Acres:</span> ${props.ACRES || 'N/A'}</div>
-          <div><span class="font-medium">Land Value:</span> $${props.CER_LAND_VALUE ? Number(props.CER_LAND_VALUE).toLocaleString() : 'N/A'}</div>
-          <div><span class="font-medium">Just Value:</span> $${props.CER_JUST_VALUE ? Number(props.CER_JUST_VALUE).toLocaleString() : 'N/A'}</div>
-          <div><span class="font-medium">Legal:</span> ${props.LEGAL1 || 'N/A'}</div>
-        </div>
-        <div class="mt-3 flex gap-2">
-          <button 
-            onclick="window.selectParcel('${props.PARCEL_NUMBER}')"
-            class="px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700"
-          >
-            Select
-          </button>
-          <button 
-            onclick="window.toggleFavorite('${props.PARCEL_NUMBER}')"
-            class="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
-          >
-            ${favoriteIds.includes(props.PARCEL_NUMBER) ? 'Unfavorite' : 'Favorite'}
-          </button>
-        </div>
-      </div>
-    `
-    
-    layer.bindPopup(popupContent)
-
-    // Add click handler for parcel selection
+    // Add click handler for parcel selection and panel
     layer.on('click', () => {
       setSelectedParcel(props.PARCEL_NUMBER)
+      setPanelParcel(feature)
+      setShowPanel(true)
+    })
+
+    // Add hover effects
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 3,
+        color: '#3B82F6',
+        fillOpacity: 0.7
+      })
+    })
+
+    layer.on('mouseout', () => {
+      layer.setStyle({
+        weight: 2,
+        color: selectedParcel === props.PARCEL_NUMBER ? '#EF4444' : '#3B82F6',
+        fillOpacity: selectedParcel === props.PARCEL_NUMBER ? 0.7 : 0.5
+      })
     })
   }
-
-  // Make functions available globally for popup buttons
-  useEffect(() => {
-    window.selectParcel = (parcelId) => {
-      setSelectedParcel(parcelId)
-    }
-
-    window.toggleFavorite = (parcelId) => {
-      toggleFavorite(parcelId)
-    }
-
-    // Cleanup
-    return () => {
-      delete window.selectParcel
-      delete window.toggleFavorite
-    }
-  }, [])
 
   if (loading) {
     return (
@@ -393,6 +367,17 @@ const ManateeMapPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Parcel Information Panel */}
+      {showPanel && panelParcel && (
+        <ParcelInfoPanel
+          parcel={panelParcel}
+          county="Manatee"
+          favorites={favorites}
+          onClose={() => setShowPanel(false)}
+          onToggleFavorite={toggleFavorite}
+        />
+      )}
     </div>
   )
 }

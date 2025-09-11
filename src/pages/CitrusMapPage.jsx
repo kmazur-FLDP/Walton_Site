@@ -5,6 +5,7 @@ import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outl
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
+import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -27,6 +28,8 @@ const CitrusMapPage = () => {
   const [parcelCount, setParcelCount] = useState(0)
   const [mapReady, setMapReady] = useState(false)
   const [computedCenter, setComputedCenter] = useState(null)
+  const [showPanel, setShowPanel] = useState(false)
+  const [panelParcel, setPanelParcel] = useState(null)
 
   // Load Citrus parcel data when component mounts
   useEffect(() => {
@@ -184,62 +187,31 @@ const CitrusMapPage = () => {
 
   const onEachFeature = (feature, layer) => {
     const props = feature.properties
-    const fullAddress = `${props.ADRNO || ''} ${props.ADRDIR || ''} ${props.ADRSTR || ''} ${props.ADRSUF || ''}`.trim()
     
-    // Create popup content
-    const popupContent = `
-      <div class="p-3 min-w-64">
-        <h3 class="font-semibold text-base mb-2">${fullAddress || 'Unknown Address'}</h3>
-        <div class="space-y-1 text-sm">
-          <div><span class="font-medium">Parcel UID:</span> ${props.PARCEL_UID || 'N/A'}</div>
-          <div><span class="font-medium">Alt ID:</span> ${props.ALT_ID || 'N/A'}</div>
-          <div><span class="font-medium">Owner:</span> ${props.OWN1 || 'Unknown'}</div>
-          <div><span class="font-medium">Acres:</span> ${props.Acres ? Number(props.Acres).toFixed(2) : 'N/A'}</div>
-          <div><span class="font-medium">Sq Ft:</span> ${props.SQFT ? Number(props.SQFT).toLocaleString() : 'N/A'}</div>
-          <div><span class="font-medium">City:</span> ${props.CITYNAME || 'N/A'}</div>
-          <div><span class="font-medium">Class:</span> ${props.CLASS || 'N/A'}</div>
-        </div>
-        <div class="mt-3 flex gap-2">
-          <button 
-            onclick="window.selectParcel(${props.PARCEL_UID})"
-            class="px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700"
-          >
-            Select
-          </button>
-          <button 
-            onclick="window.toggleFavorite(${props.PARCEL_UID})"
-            class="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
-          >
-            ${favoriteIds.includes(props.PARCEL_UID) ? 'Unfavorite' : 'Favorite'}
-          </button>
-        </div>
-      </div>
-    `
-    
-    layer.bindPopup(popupContent)
-
-    // Add click handler for parcel selection
+    // Add click handler for parcel selection and panel
     layer.on('click', () => {
       setSelectedParcel(props.PARCEL_UID)
+      setPanelParcel(feature)
+      setShowPanel(true)
+    })
+
+    // Add hover effects
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 3,
+        color: '#3B82F6',
+        fillOpacity: 0.7
+      })
+    })
+
+    layer.on('mouseout', () => {
+      layer.setStyle({
+        weight: 2,
+        color: selectedParcel === props.PARCEL_UID ? '#EF4444' : '#3B82F6',
+        fillOpacity: selectedParcel === props.PARCEL_UID ? 0.7 : 0.5
+      })
     })
   }
-
-  // Make functions available globally for popup buttons
-  useEffect(() => {
-    window.selectParcel = (parcelId) => {
-      setSelectedParcel(parcelId)
-    }
-
-    window.toggleFavorite = (parcelId) => {
-      toggleFavorite(parcelId)
-    }
-
-    // Cleanup
-    return () => {
-      delete window.selectParcel
-      delete window.toggleFavorite
-    }
-  }, [toggleFavorite])
 
   if (loading) {
     return (
@@ -383,6 +355,17 @@ const CitrusMapPage = () => {
           )}
         </div>
       </div>
+
+      {/* Parcel Information Panel */}
+      {showPanel && panelParcel && (
+        <ParcelInfoPanel
+          parcel={panelParcel}
+          county="Citrus"
+          favorites={favorites}
+          onClose={() => setShowPanel(false)}
+          onToggleFavorite={toggleFavorite}
+        />
+      )}
     </div>
   )
 }

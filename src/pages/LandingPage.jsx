@@ -1,9 +1,113 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapIcon, StarIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { MapIcon, StarIcon, ChartBarIcon, EnvelopeIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import dataService from '../services/dataService'
-import adminService from '../services/adminService'
+
+// Mini Map Preview Component
+const MapPreview = ({ county, onPreview }) => {
+  const [isHovered, setIsHovered] = useState(false)
+  
+  // County center coordinates for map previews
+  const countyData = {
+    'Pasco County': { 
+      center: [28.3507, -82.4572], 
+      zoom: 10,
+      color: '#ffeb3b',
+      mapUrl: '/pasco'
+    },
+    'Polk County': { 
+      center: [28.0836, -81.5378], 
+      zoom: 9,
+      color: '#ffeb3b',
+      mapUrl: '/polk'
+    },
+    'Hernando County': { 
+      center: [28.5584, -82.4511], 
+      zoom: 10,
+      color: '#22c55e',
+      mapUrl: '/hernando'
+    },
+    'Citrus County': { 
+      center: [28.9005, -82.4808], 
+      zoom: 10,
+      color: '#ef4444',
+      mapUrl: '/citrus'
+    },
+    'Manatee County': { 
+      center: [27.4989, -82.5748], 
+      zoom: 10,
+      color: '#3b82f6',
+      mapUrl: '/manatee'
+    }
+  }
+  
+  const data = countyData[county.name]
+  if (!data) return null
+  
+  return (
+    <div className="relative">
+      {/* Mini Map Container */}
+      <div 
+        className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden relative cursor-pointer group"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={() => onPreview && onPreview(county.name, data)}
+      >
+        {/* Simulated Map Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-50 to-blue-100">
+          {/* Simulated County Shape */}
+          <div 
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 rounded-lg opacity-80"
+            style={{
+              left: '50%',
+              top: '45%',
+              width: '60%',
+              height: '50%',
+              backgroundColor: data.color,
+              border: `2px solid ${data.color}`,
+              filter: 'brightness(0.9)'
+            }}
+          ></div>
+          
+          {/* Parcel Dots Simulation */}
+          {Array.from({ length: Math.min(county.parcels, 15) }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 rounded-full opacity-60"
+              style={{
+                backgroundColor: data.color,
+                left: `${30 + (Math.random() * 40)}%`,
+                top: `${25 + (Math.random() * 50)}%`,
+                filter: 'brightness(0.7)'
+              }}
+            ></div>
+          ))}
+        </div>
+        
+        {/* Hover Overlay */}
+        <div className={`absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center ${isHovered ? 'bg-opacity-20' : ''}`}>
+          {isHovered && (
+            <div className="bg-white bg-opacity-90 rounded-lg px-3 py-2 text-sm font-medium text-gray-900 flex items-center space-x-2">
+              <EyeIcon className="w-4 h-4" />
+              <span>Quick Preview</span>
+            </div>
+          )}
+        </div>
+        
+        {/* County Label */}
+        <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 rounded px-2 py-1 text-xs font-medium text-gray-900">
+          {county.name.replace(' County', '')}
+        </div>
+        
+        {/* Parcel Count Badge */}
+        <div className="absolute top-2 right-2 bg-primary-600 text-white rounded-full text-xs px-2 py-1 font-medium">
+          {county.parcels}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -17,6 +121,16 @@ const LandingPage = () => {
     { name: 'Manatee County', parcels: 12, available: true, path: '/manatee' }, // Actual count from GeoJSON
   ])
 
+  // Handle map preview clicks
+  const handleMapPreview = (countyName, mapData) => {
+    // For now, just navigate to the county page
+    // In the future, this could open a modal with a larger preview
+    const county = counties.find(c => c.name === countyName)
+    if (county && county.available) {
+      navigate(county.path)
+    }
+  }
+
   // Stats calculated from actual GeoJSON data
   const [stats, setStats] = useState({
     totalParcels: 0,
@@ -25,18 +139,20 @@ const LandingPage = () => {
     loading: true
   })
 
-  // Admin checking
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  // Check admin status
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      const adminStatus = await adminService.isAdmin()
-      setIsAdmin(adminStatus)
-      console.log('LandingPage: Admin status:', adminStatus)
+  // Progress tracking for data loading
+  const [loadingProgress, setLoadingProgress] = useState({
+    current: 0,
+    total: 6, // 5 counties + 1 development areas
+    message: 'Initializing...',
+    counties: {
+      hernando: false,
+      citrus: false,
+      manatee: false,
+      pasco: false,
+      polk: false,
+      polkDev: false
     }
-    checkAdminStatus()
-  }, [])
+  })
 
   // Calculate stats from available county data on component mount
   useEffect(() => {
@@ -45,7 +161,17 @@ const LandingPage = () => {
         let totalAcres = 0
         let totalParcels = 0
 
+        const updateProgress = (county, message) => {
+          setLoadingProgress(prev => ({
+            ...prev,
+            current: prev.current + 1,
+            message,
+            counties: { ...prev.counties, [county]: true }
+          }))
+        }
+
         // Load Hernando data
+        setLoadingProgress(prev => ({ ...prev, message: 'Loading Hernando County data...' }))
         const hernandoData = await dataService.loadHernandoParcels()
         if (hernandoData) {
           hernandoData.features.forEach(feature => {
@@ -56,8 +182,10 @@ const LandingPage = () => {
             }
           })
         }
+        updateProgress('hernando', 'Hernando County loaded')
 
         // Load Citrus data
+        setLoadingProgress(prev => ({ ...prev, message: 'Loading Citrus County data...' }))
         const citrusData = await dataService.loadCitrusParcels()
         if (citrusData) {
           citrusData.features.forEach(feature => {
@@ -68,8 +196,10 @@ const LandingPage = () => {
             }
           })
         }
+        updateProgress('citrus', 'Citrus County loaded')
 
         // Load Manatee data
+        setLoadingProgress(prev => ({ ...prev, message: 'Loading Manatee County data...' }))
         const manateeData = await dataService.loadManateeParcels()
         if (manateeData) {
           manateeData.features.forEach(feature => {
@@ -80,8 +210,10 @@ const LandingPage = () => {
             }
           })
         }
+        updateProgress('manatee', 'Manatee County loaded')
 
         // Load Pasco data
+        setLoadingProgress(prev => ({ ...prev, message: 'Loading Pasco County data...' }))
         const pascoData = await dataService.loadPascoParcels()
         if (pascoData) {
           pascoData.features.forEach(feature => {
@@ -92,8 +224,10 @@ const LandingPage = () => {
             }
           })
         }
+        updateProgress('pasco', 'Pasco County loaded')
 
         // Load Polk data
+        setLoadingProgress(prev => ({ ...prev, message: 'Loading Polk County data...' }))
         const polkData = await dataService.loadPolkParcels()
         if (polkData) {
           polkData.features.forEach(feature => {
@@ -104,18 +238,14 @@ const LandingPage = () => {
             }
           })
         }
+        updateProgress('polk', 'Polk County loaded')
 
         // Load Polk Development Areas data
-        const polkDevData = await dataService.loadPolkDevelopmentAreas()
-        if (polkDevData) {
-          polkDevData.features.forEach(feature => {
-            const acres = parseFloat(feature.properties.Acres)
-            if (!isNaN(acres) && acres > 0) {
-              totalAcres += acres
-              // Note: We don't increment totalParcels for dev areas since they're different entities
-            }
-          })
-        }
+        setLoadingProgress(prev => ({ ...prev, message: 'Loading development areas...' }))
+        await dataService.loadPolkDevelopmentAreas()
+        // Note: Development areas are loaded for other features but NOT included in parcel statistics
+        // since they represent zoning areas, not individual parcels
+        updateProgress('polkDev', 'All data loaded successfully')
 
         const avgAcreage = totalParcels > 0 ? totalAcres / totalParcels : 0
 
@@ -125,9 +255,21 @@ const LandingPage = () => {
           avgAcreage,
           loading: false
         })
+
+        // Final progress update
+        setLoadingProgress(prev => ({ 
+          ...prev, 
+          message: 'Ready to explore!',
+          current: prev.total 
+        }))
       } catch (error) {
         console.error('Error calculating stats:', error)
         setStats(prev => ({ ...prev, loading: false }))
+        setLoadingProgress(prev => ({ 
+          ...prev, 
+          message: 'Error loading data',
+          current: prev.total 
+        }))
       }
     }
 
@@ -179,6 +321,46 @@ const LandingPage = () => {
             Please review and select parcels of interest to you for further analysis.
           </motion.p>
         </motion.div>
+
+        {/* Progress Indicator - Show while loading */}
+        {stats.loading && (
+          <motion.div 
+            variants={containerVariants}
+            className="mb-12"
+          >
+            <div className="card">
+              <motion.div variants={itemVariants} className="text-center">
+                <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Loading County Data</h3>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                  <div 
+                    className="bg-primary-600 h-2 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+                
+                {/* Progress Text */}
+                <p className="text-sm text-gray-600 mb-4">{loadingProgress.message}</p>
+                
+                {/* County Status Indicators */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                  {Object.entries(loadingProgress.counties).map(([county, loaded]) => (
+                    <div key={county} className="flex items-center justify-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${loaded ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span className={loaded ? 'text-green-600' : 'text-gray-500'}>
+                        {county === 'polkDev' ? 'Dev Areas' : county.charAt(0).toUpperCase() + county.slice(1)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Stats Section */}
         <motion.div 
@@ -248,6 +430,11 @@ const LandingPage = () => {
                 }`}
                 onClick={() => county.available && navigate(county.path)}
               >
+                {/* Map Preview */}
+                <div className="mb-4">
+                  <MapPreview county={county} onPreview={handleMapPreview} />
+                </div>
+
                 <div className="flex items-center justify-between mb-4">
                   <h3 className={`text-lg font-semibold transition-colors ${
                     county.available 
@@ -277,6 +464,14 @@ const LandingPage = () => {
                       {county.parcels.toLocaleString()}
                     </span>
                   </div>
+                  
+                  {/* Additional county info */}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`font-medium ${county.available ? 'text-green-600' : 'text-gray-500'}`}>
+                      {county.available ? 'Ready' : 'Coming Soon'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-200">
@@ -288,7 +483,7 @@ const LandingPage = () => {
                     }`}
                     disabled={!county.available}
                   >
-                    {county.available ? 'View Map Data' : 'Coming Soon'}
+                    {county.available ? 'Explore Map Data' : 'Coming Soon'}
                   </button>
                 </div>
               </motion.div>
@@ -297,7 +492,7 @@ const LandingPage = () => {
         </motion.div>
 
         {/* Recent Activity */}
-        <motion.div variants={containerVariants} className="card">
+        <motion.div variants={containerVariants} className="card mb-12">
           <motion.h2 
             variants={itemVariants}
             className="text-xl font-semibold text-gray-900 mb-6"
@@ -308,19 +503,36 @@ const LandingPage = () => {
             <StarIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p>No recent activity to display</p>
             <p className="text-sm mt-2">Start exploring county maps to see your activity here</p>
-            
-            {/* Temporary Admin Access - Remove once navbar is working */}
-            {isAdmin && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700"
-                >
-                  🛠️ Admin Dashboard (Temporary Link)
-                </button>
-                <p className="text-xs text-red-600 mt-1">Admin access detected</p>
-              </div>
-            )}
+          </motion.div>
+        </motion.div>
+
+        {/* Contact Section */}
+        <motion.div variants={containerVariants} className="card">
+          <motion.h2 
+            variants={itemVariants}
+            className="text-xl font-semibold text-gray-900 mb-6"
+          >
+            Need Help?
+          </motion.h2>
+          <motion.div variants={itemVariants} className="text-center py-8">
+            <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <EnvelopeIcon className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Contact Support</h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Have questions about the data, need assistance with the portal, or want to submit a help request? 
+              We're here to help!
+            </p>
+            <a 
+              href="mailto:kmmazur@fldandp.com?subject=Walton Global GIS Portal - Help Request"
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <EnvelopeIcon className="w-5 h-5 mr-2" />
+              Send Help Request
+            </a>
+            <p className="text-sm text-gray-500 mt-3">
+              Email: <span className="font-medium">kmmazur@fldandp.com</span>
+            </p>
           </motion.div>
         </motion.div>
       </div>

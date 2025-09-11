@@ -5,6 +5,7 @@ import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outl
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
+import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -21,6 +22,8 @@ const PolkMapPage = () => {
   const mapRef = useRef()
   const [favorites, setFavorites] = useState(new Set())
   const [selectedParcel, setSelectedParcel] = useState(null)
+  const [selectedParcelData, setSelectedParcelData] = useState(null)
+  const [showInfoPanel, setShowInfoPanel] = useState(false)
   const [loading, setLoading] = useState(true)
   const [parcelData, setParcelData] = useState(null)
   const [developmentData, setDevelopmentData] = useState(null)
@@ -185,20 +188,20 @@ const PolkMapPage = () => {
     const isSelected = selectedParcel === parcelId;
     const isFavorite = favoriteIds.includes(parcelId);
     
-    if (isFavorite) {
+    if (isSelected) {
+      return {
+        fillColor: '#3b82f6', // Blue for selected
+        weight: 3,
+        color: '#1d4ed8',
+        fillOpacity: 0.8
+      };
+    } else if (isFavorite) {
       return {
         fillColor: '#f59e0b', // Amber for favorites
         weight: 2,
         opacity: 1,
         color: '#d97706',
         fillOpacity: 0.7
-      };
-    } else if (isSelected) {
-      return {
-        fillColor: '#3b82f6', // Blue for selected
-        weight: 3,
-        color: '#1d4ed8',
-        fillOpacity: 0.8
       };
     } else {
       return {
@@ -227,43 +230,26 @@ const PolkMapPage = () => {
   }
 
   const onEachFeature = (feature, layer) => {
-    const props = feature.properties
-    const fullAddress = `${props.BAS_STRT || 'Unknown Address'}`.trim()
-    
-    // Create popup content
-    const popupContent = `
-      <div class="p-3 min-w-64">
-        <h3 class="font-semibold text-base mb-2">${fullAddress}</h3>
-        <div class="space-y-1 text-sm">
-          <div><span class="font-medium">Parcel ID:</span> ${props.PARCEL_ID || 'N/A'}</div>
-          <div><span class="font-medium">Parcel No:</span> ${props.PARCELNO || 'N/A'}</div>
-          <div><span class="font-medium">Object ID:</span> ${props.OBJECTID || 'N/A'}</div>
-          <div><span class="font-medium">Acres:</span> ${props.Acres ? Number(props.Acres).toFixed(2) : 'N/A'}</div>
-          <div><span class="font-medium">Assessment Year:</span> ${props.ASMNT_YR || 'N/A'}</div>
-          <div><span class="font-medium">File Type:</span> ${props.FILE_T || 'N/A'}</div>
-        </div>
-        <div class="mt-3 flex gap-2">
-          <button 
-            onclick="window.selectParcel('${props.PARCEL_ID}')"
-            class="px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700"
-          >
-            Select
-          </button>
-          <button 
-            onclick="window.toggleFavorite('${props.PARCEL_ID}')"
-            class="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
-          >
-            ${favoriteIds.includes(props.PARCEL_ID) ? 'Unfavorite' : 'Favorite'}
-          </button>
-        </div>
-      </div>
-    `
-    
-    layer.bindPopup(popupContent)
-
     // Add click handler for parcel selection
     layer.on('click', () => {
-      setSelectedParcel(props.PARCEL_ID)
+      setSelectedParcel(feature.properties.PARCEL_ID)
+      setSelectedParcelData(feature)
+      setShowInfoPanel(true)
+    })
+
+    // Add hover effects
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 3,
+        fillOpacity: 0.8
+      })
+    })
+
+    layer.on('mouseout', () => {
+      // Reset to normal style unless selected
+      if (selectedParcel !== feature.properties.PARCEL_ID) {
+        layer.setStyle(parcelStyle(feature))
+      }
     })
   }
 
@@ -287,6 +273,13 @@ const PolkMapPage = () => {
     `
     
     layer.bindPopup(popupContent)
+  }
+
+  // Clean up function to close info panel
+  const handleCloseInfoPanel = () => {
+    setShowInfoPanel(false)
+    setSelectedParcel(null)
+    setSelectedParcelData(null)
   }
 
   // Make functions available globally for popup buttons
@@ -507,6 +500,16 @@ const PolkMapPage = () => {
           )}
         </div>
       </div>
+
+      {/* Parcel Information Panel */}
+      <ParcelInfoPanel
+        parcel={selectedParcelData}
+        isOpen={showInfoPanel}
+        onClose={handleCloseInfoPanel}
+        onToggleFavorite={toggleFavorite}
+        isFavorite={selectedParcel ? favorites.has(selectedParcel) : false}
+        county="Polk"
+      />
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outl
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
+import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -21,6 +22,8 @@ const PascoMapPage = () => {
   const mapRef = useRef()
   const [favorites, setFavorites] = useState(new Set())
   const [selectedParcel, setSelectedParcel] = useState(null)
+  const [selectedParcelData, setSelectedParcelData] = useState(null)
+  const [showInfoPanel, setShowInfoPanel] = useState(false)
   const [loading, setLoading] = useState(true)
   const [parcelData, setParcelData] = useState(null)
   const [error, setError] = useState(null)
@@ -152,20 +155,20 @@ const PascoMapPage = () => {
     const isSelected = selectedParcel === parcelId;
     const isFavorite = favoriteIds.includes(parcelId);
     
-    if (isFavorite) {
+    if (isSelected) {
+      return {
+        fillColor: '#3b82f6', // Blue for selected
+        weight: 3,
+        color: '#1d4ed8',
+        fillOpacity: 0.8
+      };
+    } else if (isFavorite) {
       return {
         fillColor: '#f59e0b', // Amber for favorites
         weight: 2,
         opacity: 1,
         color: '#d97706',
         fillOpacity: 0.7
-      };
-    } else if (isSelected) {
-      return {
-        fillColor: '#3b82f6', // Blue for selected
-        weight: 3,
-        color: '#1d4ed8',
-        fillOpacity: 0.8
       };
     } else {
       return {
@@ -181,63 +184,35 @@ const PascoMapPage = () => {
   // (zoomToParcelBounds defined above)
 
   const onEachFeature = (feature, layer) => {
-    const props = feature.properties
-    const fullAddress = `${props.ADRNO || ''} ${props.ADRDIR || ''} ${props.ADRSTR || ''} ${props.ADRSUF || ''}`.trim()
-    
-    // Create popup content
-    const popupContent = `
-      <div class="p-3 min-w-64">
-        <h3 class="font-semibold text-base mb-2">${fullAddress || 'Unknown Address'}</h3>
-        <div class="space-y-1 text-sm">
-          <div><span class="font-medium">Parcel UID:</span> ${props.PARCEL_UID || 'N/A'}</div>
-          <div><span class="font-medium">Alt ID:</span> ${props.ALT_ID || 'N/A'}</div>
-          <div><span class="font-medium">Owner:</span> ${props.OWN1 || 'Unknown'}</div>
-          <div><span class="font-medium">Acres:</span> ${props.Acres ? Number(props.Acres).toFixed(2) : 'N/A'}</div>
-          <div><span class="font-medium">Sq Ft:</span> ${props.SQFT ? Number(props.SQFT).toLocaleString() : 'N/A'}</div>
-          <div><span class="font-medium">City:</span> ${props.CITYNAME || 'N/A'}</div>
-          <div><span class="font-medium">Class:</span> ${props.CLASS || 'N/A'}</div>
-        </div>
-        <div class="mt-3 flex gap-2">
-          <button 
-            onclick="window.selectParcel(${props.PARCEL_UID})"
-            class="px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700"
-          >
-            Select
-          </button>
-          <button 
-            onclick="window.toggleFavorite(${props.PARCEL_UID})"
-            class="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
-          >
-            ${favoriteIds.includes(props.PARCEL_UID) ? 'Unfavorite' : 'Favorite'}
-          </button>
-        </div>
-      </div>
-    `
-    
-    layer.bindPopup(popupContent)
-
     // Add click handler for parcel selection
     layer.on('click', () => {
-      setSelectedParcel(props.PARCEL_UID)
+      setSelectedParcel(feature.properties.PARCEL_UID)
+      setSelectedParcelData(feature)
+      setShowInfoPanel(true)
+    })
+
+    // Add hover effects
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 3,
+        fillOpacity: 0.8
+      })
+    })
+
+    layer.on('mouseout', () => {
+      // Reset to normal style unless selected
+      if (selectedParcel !== feature.properties.PARCEL_UID) {
+        layer.setStyle(parcelStyle(feature))
+      }
     })
   }
 
-  // Make functions available globally for popup buttons
-  useEffect(() => {
-    window.selectParcel = (parcelId) => {
-      setSelectedParcel(parcelId)
-    }
-
-    window.toggleFavorite = (parcelId) => {
-      toggleFavorite(parcelId)
-    }
-
-    // Cleanup
-    return () => {
-      delete window.selectParcel
-      delete window.toggleFavorite
-    }
-  }, [toggleFavorite])
+  // Clean up function to close info panel
+  const handleCloseInfoPanel = () => {
+    setShowInfoPanel(false)
+    setSelectedParcel(null)
+    setSelectedParcelData(null)
+  }
 
   if (loading) {
     return (
@@ -294,7 +269,7 @@ const PascoMapPage = () => {
                 <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-lg">
                   <span className="text-sm text-blue-700">Selected: {selectedParcel}</span>
                   <button
-                    onClick={() => setSelectedParcel(null)}
+                    onClick={handleCloseInfoPanel}
                     className="text-blue-500 hover:text-blue-700"
                   >
                     ×
@@ -381,6 +356,16 @@ const PascoMapPage = () => {
           )}
         </div>
       </div>
+
+      {/* Parcel Information Panel */}
+      <ParcelInfoPanel
+        parcel={selectedParcelData}
+        isOpen={showInfoPanel}
+        onClose={handleCloseInfoPanel}
+        onToggleFavorite={toggleFavorite}
+        isFavorite={selectedParcel ? favorites.has(selectedParcel) : false}
+        county="Pasco"
+      />
     </div>
   )
 }
