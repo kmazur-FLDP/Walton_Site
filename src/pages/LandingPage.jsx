@@ -10,10 +10,10 @@ const LandingPage = () => {
   const [counties] = useState([
     // Counties ordered by priority for Walton Global
     // Parcel counts reflect actual GeoJSON data where available
-    { name: 'Pasco County', parcels: 28987, available: false }, // Estimated - no GeoJSON yet
-    { name: 'Polk County', parcels: 68542, available: false }, // Estimated - no GeoJSON yet  
+    { name: 'Pasco County', parcels: 217, available: true, path: '/pasco' }, // Actual count from GeoJSON
+    { name: 'Polk County', parcels: 114, available: true, path: '/polk' }, // Actual count from GeoJSON  
     { name: 'Hernando County', parcels: 37, available: true, path: '/hernando' }, // Actual count from GeoJSON
-    { name: 'Citrus County', parcels: 18432, available: false }, // Estimated - no GeoJSON yet
+    { name: 'Citrus County', parcels: 214, available: true, path: '/citrus' }, // Actual count from GeoJSON
     { name: 'Manatee County', parcels: 12, available: true, path: '/manatee' }, // Actual count from GeoJSON
   ])
 
@@ -57,6 +57,18 @@ const LandingPage = () => {
           })
         }
 
+        // Load Citrus data
+        const citrusData = await dataService.loadCitrusParcels()
+        if (citrusData) {
+          citrusData.features.forEach(feature => {
+            const acres = parseFloat(feature.properties.Acres)
+            if (!isNaN(acres) && acres > 0) {
+              totalAcres += acres
+              totalParcels++
+            }
+          })
+        }
+
         // Load Manatee data
         const manateeData = await dataService.loadManateeParcels()
         if (manateeData) {
@@ -65,6 +77,42 @@ const LandingPage = () => {
             if (!isNaN(acres) && acres > 0) {
               totalAcres += acres
               totalParcels++
+            }
+          })
+        }
+
+        // Load Pasco data
+        const pascoData = await dataService.loadPascoParcels()
+        if (pascoData) {
+          pascoData.features.forEach(feature => {
+            const acres = parseFloat(feature.properties.Acres || feature.properties.ACRES)
+            if (!isNaN(acres) && acres > 0) {
+              totalAcres += acres
+              totalParcels++
+            }
+          })
+        }
+
+        // Load Polk data
+        const polkData = await dataService.loadPolkParcels()
+        if (polkData) {
+          polkData.features.forEach(feature => {
+            const acres = parseFloat(feature.properties.Acres || feature.properties.ACRES)
+            if (!isNaN(acres) && acres > 0) {
+              totalAcres += acres
+              totalParcels++
+            }
+          })
+        }
+
+        // Load Polk Development Areas data
+        const polkDevData = await dataService.loadPolkDevelopmentAreas()
+        if (polkDevData) {
+          polkDevData.features.forEach(feature => {
+            const acres = parseFloat(feature.properties.Acres)
+            if (!isNaN(acres) && acres > 0) {
+              totalAcres += acres
+              // Note: We don't increment totalParcels for dev areas since they're different entities
             }
           })
         }
@@ -127,8 +175,8 @@ const LandingPage = () => {
             variants={itemVariants}
             className="text-xl text-gray-600 max-w-3xl mx-auto"
           >
-            Access your personalized GIS searches and parcel data across multiple counties.
-            Explore, analyze, and manage your property research with precision and ease.
+            Parcels in the Counties below have been prefiltered for Wetlands and Floodplain. 
+            Please review and select parcels of interest to you for further analysis.
           </motion.p>
         </motion.div>
 
@@ -187,7 +235,7 @@ const LandingPage = () => {
             Select a County to Explore
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {counties.map((county, index) => (
+            {counties.map((county) => (
               <motion.div
                 key={county.name}
                 variants={itemVariants}

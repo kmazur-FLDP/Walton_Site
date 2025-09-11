@@ -4,6 +4,11 @@ import LoginPage from './pages/LoginPage'
 import LandingPage from './pages/LandingPage'
 import MapPage from './pages/MapPage'
 import HernandoMapPage from './pages/HernandoMapPage'
+import CitrusMapPage from './pages/CitrusMapPage'
+import PascoMapPage from './pages/PascoMapPage'
+import PolkMapPage from './pages/PolkMapPage'
+import TestCitrusMap from './pages/TestCitrusMap'
+import CitrusDebugMap from './pages/CitrusDebugMap'
 import ManateeMapPage from './pages/ManateeMapPage'
 import FavoritesPage from './pages/FavoritesPage'
 import AdminDashboard from './pages/AdminDashboard'
@@ -76,6 +81,46 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <HernandoMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/citrus"
+          element={
+            <ProtectedRoute>
+              <CitrusMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pasco"
+          element={
+            <ProtectedRoute>
+              <PascoMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/polk"
+          element={
+            <ProtectedRoute>
+              <PolkMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/test-citrus"
+          element={
+            <ProtectedRoute>
+              <TestCitrusMap />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/debug-citrus"
+          element={
+            <ProtectedRoute>
+              <CitrusDebugMap />
             </ProtectedRoute>
           }
         />

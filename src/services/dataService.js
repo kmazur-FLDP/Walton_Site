@@ -64,6 +64,113 @@ class DataService {
   }
 
   /**
+   * Load Citrus County parcels
+   * @returns {Promise<Object|null>} GeoJSON parcel data
+   */
+  async loadCitrusParcels(forceReload = false) {
+    const cacheKey = 'citrus-parcels'
+    if (!forceReload && this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+    if (forceReload) {
+      this.cache.delete(cacheKey)
+    }
+    try {
+      const response = await fetch(`${this.baseUrl}/Citrus_Parcels.geojson?_ts=${Date.now()}`) // cache-bust
+      if (!response.ok) {
+        throw new Error(`Citrus parcels not found (${response.status})`)
+      }
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Citrus parcels:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Pasco County parcels
+   * @returns {Promise<Object|null>} GeoJSON parcel data
+   */
+  async loadPascoParcels() {
+    const cacheKey = 'pasco-parcels'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Pasco_Parcels.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Pasco parcels not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Pasco parcels:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Polk County parcels
+   * @returns {Promise<Object|null>} GeoJSON parcel data
+   */
+  async loadPolkParcels() {
+    const cacheKey = 'polk-parcels'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Polk_Parcels.json`)
+      
+      if (!response.ok) {
+        throw new Error(`Polk parcels not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Polk parcels:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Polk County Development Areas
+   * @returns {Promise<Object|null>} GeoJSON development area data
+   */
+  async loadPolkDevelopmentAreas() {
+    const cacheKey = 'polk-development-areas'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Polk_Development_Areas.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Polk development areas not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Polk development areas:', error)
+      return null
+    }
+  }
+
+  /**
    * Load Manatee Future Development Boundary
    * @returns {Promise<Object|null>} GeoJSON boundary data
    */
