@@ -175,7 +175,7 @@ const LandingPage = () => {
             variants={itemVariants}
             className="text-xl text-gray-600 max-w-3xl mx-auto"
           >
-            Parcels in the Counties below have been prefiltered for Wetlands and Floodplain. 
+            Parcels in the Counties below have been prefiltered for minimal amounts of Wetlands and Floodplain. 
             Please review and select parcels of interest to you for further analysis.
           </motion.p>
         </motion.div>
