@@ -114,7 +114,7 @@ const LandingPage = () => {
   const [counties] = useState([
     // Counties ordered by priority for Walton Global
     // Parcel counts reflect actual GeoJSON data where available
-    { name: 'Pasco County', parcels: 217, available: true, path: '/pasco' }, // Actual count from GeoJSON
+    { name: 'Pasco County', parcels: 133, available: true, path: '/pasco' }, // Updated count from GeoJSON
     { name: 'Polk County', parcels: 114, available: true, path: '/polk' }, // Actual count from GeoJSON  
     { name: 'Hernando County', parcels: 37, available: true, path: '/hernando' }, // Actual count from GeoJSON
     { name: 'Citrus County', parcels: 214, available: true, path: '/citrus' }, // Actual count from GeoJSON
@@ -309,13 +309,13 @@ const LandingPage = () => {
         >
           <motion.h1 
             variants={itemVariants}
-            className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4"
+            className="text-4xl sm:text-5xl font-bold text-secondary-800 mb-4"
           >
-            Walton Global GIS Portal
+            Walton Global FLD&P GIS Portal
           </motion.h1>
           <motion.p 
             variants={itemVariants}
-            className="text-xl text-gray-600 max-w-3xl mx-auto"
+            className="text-xl text-secondary-600 max-w-3xl mx-auto"
           >
             Parcels in the Counties below have been prefiltered for minimal amounts of Wetlands and Floodplain. 
             Please review and select parcels of interest to you for further analysis.
@@ -376,35 +376,35 @@ const LandingPage = () => {
           </motion.div>
 
           <motion.div variants={itemVariants} className="card text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <ChartBarIcon className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <ChartBarIcon className="w-6 h-6 text-primary-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Parcels</h3>
-            <p className="text-3xl font-bold text-green-600">
+            <h3 className="text-lg font-semibold text-secondary-800 mb-2">Total Parcels</h3>
+            <p className="text-3xl font-bold text-primary-600">
               {counties.reduce((sum, county) => sum + county.parcels, 0).toLocaleString()}
             </p>
           </motion.div>
 
           <motion.div variants={itemVariants} className="card text-center">
-            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <div className="text-amber-600 text-xl font-bold">🏞️</div>
+            <div className="w-12 h-12 bg-accent-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="text-accent-600 text-xl font-bold">🏞️</div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Acreage</h3>
-            <p className="text-3xl font-bold text-amber-600">
+            <h3 className="text-lg font-semibold text-secondary-800 mb-2">Total Acreage</h3>
+            <p className="text-3xl font-bold text-accent-600">
               {stats.loading ? '...' : `${stats.totalAcres.toLocaleString(undefined, {maximumFractionDigits: 0})}`}
             </p>
-            <p className="text-sm text-gray-500 mt-1">From live data</p>
+            <p className="text-sm text-secondary-500 mt-1">From live data</p>
           </motion.div>
 
           <motion.div variants={itemVariants} className="card text-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <div className="text-purple-600 text-xl font-bold">📏</div>
+            <div className="w-12 h-12 bg-earth-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <div className="text-earth-600 text-xl font-bold">📏</div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Avg Parcel Size</h3>
-            <p className="text-3xl font-bold text-purple-600">
+            <h3 className="text-lg font-semibold text-secondary-800 mb-2">Avg Parcel Size</h3>
+            <p className="text-3xl font-bold text-earth-600">
               {stats.loading ? '...' : `${stats.avgAcreage.toFixed(1)}`}
             </p>
-            <p className="text-sm text-gray-500 mt-1">Acres per parcel</p>
+            <p className="text-sm text-secondary-500 mt-1">Acres per parcel</p>
           </motion.div>
         </motion.div>
 
@@ -412,7 +412,7 @@ const LandingPage = () => {
         <motion.div variants={containerVariants} className="mb-12">
           <motion.h2 
             variants={itemVariants}
-            className="text-2xl font-bold text-gray-900 mb-8 text-center"
+            className="text-2xl font-bold text-secondary-800 mb-8 text-center"
           >
             Select a County to Explore
           </motion.h2>
@@ -438,8 +438,8 @@ const LandingPage = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className={`text-lg font-semibold transition-colors ${
                     county.available 
-                      ? 'text-gray-900 group-hover:text-primary-600' 
-                      : 'text-gray-500'
+                      ? 'text-secondary-800 group-hover:text-primary-600' 
+                      : 'text-secondary-400'
                   }`}>
                     {county.name}
                   </h3>
@@ -499,8 +499,8 @@ const LandingPage = () => {
           >
             Recent Activity
           </motion.h2>
-          <motion.div variants={itemVariants} className="text-center py-12 text-gray-500">
-            <StarIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <motion.div variants={itemVariants} className="text-center py-12 text-secondary-500">
+            <StarIcon className="w-12 h-12 mx-auto mb-4 text-secondary-300" />
             <p>No recent activity to display</p>
             <p className="text-sm mt-2">Start exploring county maps to see your activity here</p>
           </motion.div>
@@ -510,27 +510,27 @@ const LandingPage = () => {
         <motion.div variants={containerVariants} className="card">
           <motion.h2 
             variants={itemVariants}
-            className="text-xl font-semibold text-gray-900 mb-6"
+            className="text-xl font-semibold text-secondary-800 mb-6"
           >
             Need Help?
           </motion.h2>
           <motion.div variants={itemVariants} className="text-center py-8">
-            <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <EnvelopeIcon className="w-8 h-8 text-blue-600" />
+            <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <EnvelopeIcon className="w-8 h-8 text-primary-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Contact Support</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-secondary-800 mb-2">Contact Support</h3>
+            <p className="text-secondary-600 mb-6 max-w-md mx-auto">
               Have questions about the data, need assistance with the portal, or want to submit a help request? 
               We're here to help!
             </p>
             <a 
               href="mailto:kmmazur@fldandp.com?subject=Walton Global GIS Portal - Help Request"
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
             >
               <EnvelopeIcon className="w-5 h-5 mr-2" />
               Send Help Request
             </a>
-            <p className="text-sm text-gray-500 mt-3">
+            <p className="text-sm text-secondary-500 mt-3">
               Email: <span className="font-medium">kmmazur@fldandp.com</span>
             </p>
           </motion.div>

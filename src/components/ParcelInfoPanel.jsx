@@ -187,7 +187,7 @@ const ParcelInfoPanel = ({
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 overflow-hidden flex flex-col"
+        className="fixed right-0 top-24 h-[calc(100vh-6rem)] w-96 bg-white shadow-2xl z-50 overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-4">
