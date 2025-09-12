@@ -28,6 +28,7 @@ const ParcelInfoPanel = ({
     property: true,
     assessment: false
   })
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false)
 
   if (!parcel || !isOpen) return null
 
@@ -169,6 +170,20 @@ const ParcelInfoPanel = ({
     return 'N/A'
   }
 
+  // Handle favorite toggle with protection against rapid clicking
+  const handleFavoriteToggle = async () => {
+    if (isTogglingFavorite || !onToggleFavorite) return
+    
+    setIsTogglingFavorite(true)
+    try {
+      await onToggleFavorite(getParcelId())
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+    } finally {
+      setIsTogglingFavorite(false)
+    }
+  }
+
   const tabs = [
     { id: 'overview', name: 'Overview', icon: DocumentTextIcon }
   ]
@@ -195,8 +210,11 @@ const ParcelInfoPanel = ({
             <h2 className="text-lg font-semibold">Parcel Information</h2>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => onToggleFavorite && onToggleFavorite(getParcelId())}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                onClick={handleFavoriteToggle}
+                disabled={isTogglingFavorite}
+                className={`p-2 hover:bg-white/20 rounded-lg transition-colors ${
+                  isTogglingFavorite ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
                 {isFavorite ? (

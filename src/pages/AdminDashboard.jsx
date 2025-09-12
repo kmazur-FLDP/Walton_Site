@@ -71,6 +71,13 @@ const AdminDashboard = () => {
           adminService.getActivitySummary()
         ])
 
+        console.log('AdminDashboard: Loaded data:', {
+          stats: statsData,
+          favoritesCount: favoritesData?.length,
+          usersCount: usersData?.length,
+          activity: activityData
+        })
+
         setStats(statsData)
         setAllFavorites(favoritesData)
         setAllUsers(usersData)

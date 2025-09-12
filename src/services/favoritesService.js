@@ -59,8 +59,15 @@ class FavoritesService {
    */
   async addFavorite(parcelId, county, parcelAddress = null, notes = null) {
     try {
+      console.log(`FavoritesService: Adding favorite - parcelId: ${parcelId}, county: ${county}`)
+      
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No authenticated user')
+      if (!user) {
+        console.error('FavoritesService: No authenticated user')
+        throw new Error('No authenticated user')
+      }
+
+      console.log(`FavoritesService: User ID: ${user.id}`)
 
       const { data, error } = await supabase
         .from('favorite_parcels')
@@ -74,10 +81,15 @@ class FavoritesService {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('FavoritesService: Database error:', error)
+        throw error
+      }
+      
+      console.log('FavoritesService: Successfully added favorite:', data)
       return data
     } catch (error) {
-      console.error('Error adding favorite:', error)
+      console.error('FavoritesService: Error adding favorite:', error)
       return null
     }
   }
@@ -90,8 +102,13 @@ class FavoritesService {
    */
   async removeFavorite(parcelId, county = null) {
     try {
+      console.log(`FavoritesService: Removing favorite - parcelId: ${parcelId}, county: ${county}`)
+      
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No authenticated user')
+      if (!user) {
+        console.error('FavoritesService: No authenticated user for removal')
+        throw new Error('No authenticated user')
+      }
 
       let query = supabase
         .from('favorite_parcels')
@@ -105,10 +122,15 @@ class FavoritesService {
 
       const { error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('FavoritesService: Database error removing favorite:', error)
+        throw error
+      }
+      
+      console.log('FavoritesService: Successfully removed favorite')
       return true
     } catch (error) {
-      console.error('Error removing favorite:', error)
+      console.error('FavoritesService: Error removing favorite:', error)
       return false
     }
   }
@@ -121,8 +143,13 @@ class FavoritesService {
    */
   async isFavorite(parcelId, county) {
     try {
+      console.log(`FavoritesService: Checking favorite status - parcelId: ${parcelId}, county: ${county}`)
+      
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return false
+      if (!user) {
+        console.log('FavoritesService: No authenticated user for favorite check')
+        return false
+      }
 
       const { data, error } = await supabase
         .from('favorite_parcels')
@@ -132,10 +159,16 @@ class FavoritesService {
         .eq('county', county)
         .single()
 
-      if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows returned
-      return !!data
+      if (error && error.code !== 'PGRST116') {
+        console.error('FavoritesService: Database error checking favorite:', error)
+        throw error // PGRST116 = no rows returned
+      }
+      
+      const isFav = !!data
+      console.log(`FavoritesService: Favorite status result: ${isFav}`)
+      return isFav
     } catch (error) {
-      console.error('Error checking favorite status:', error)
+      console.error('FavoritesService: Error checking favorite status:', error)
       return false
     }
   }
@@ -149,17 +182,22 @@ class FavoritesService {
    */
   async toggleFavorite(parcelId, county, parcelAddress = null) {
     try {
+      console.log(`FavoritesService: Toggling favorite - parcelId: ${parcelId}, county: ${county}`)
+      
       const isFav = await this.isFavorite(parcelId, county)
+      console.log(`FavoritesService: Current favorite status: ${isFav}`)
       
       if (isFav) {
-        await this.removeFavorite(parcelId, county)
-        return false
+        console.log('FavoritesService: Removing from favorites')
+        const success = await this.removeFavorite(parcelId, county)
+        return success ? false : isFav // If removal failed, keep current status
       } else {
-        await this.addFavorite(parcelId, county, parcelAddress)
-        return true
+        console.log('FavoritesService: Adding to favorites')
+        const result = await this.addFavorite(parcelId, county, parcelAddress)
+        return result ? true : false
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      console.error('FavoritesService: Error toggling favorite:', error)
       return false
     }
   }

@@ -155,20 +155,20 @@ const PascoMapPage = () => {
     const isSelected = selectedParcel === parcelId;
     const isFavorite = favoriteIds.includes(parcelId);
     
-    if (isSelected) {
+    if (isFavorite) {
       return {
-        fillColor: '#3b82f6', // Blue for selected
-        weight: 3,
-        color: '#1d4ed8',
-        fillOpacity: 0.8
-      };
-    } else if (isFavorite) {
-      return {
-        fillColor: '#f59e0b', // Amber for favorites
+        fillColor: '#3b82f6', // Blue for favorites
         weight: 2,
         opacity: 1,
-        color: '#d97706',
+        color: '#1d4ed8',
         fillOpacity: 0.7
+      };
+    } else if (isSelected) {
+      return {
+        fillColor: '#10b981', // Green for selected
+        weight: 3,
+        color: '#059669',
+        fillOpacity: 0.8
       };
     } else {
       return {
@@ -316,7 +316,7 @@ const PascoMapPage = () => {
           {/* Parcel data layer */}
           {parcelData && (
             <GeoJSON
-              key="pasco-parcels"
+              key={`pasco-parcels-${favorites.size}-${selectedParcel || 'none'}`}
               data={parcelData}
               style={parcelStyle}
               onEachFeature={onEachFeature}
@@ -341,11 +341,11 @@ const PascoMapPage = () => {
             <span>Available Parcels</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
+            <div className="w-4 h-4 bg-green-500 border border-green-600 rounded"></div>
             <span>Selected Parcel</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-amber-500 border border-amber-600 rounded"></div>
+            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
             <span>Favorited Parcels</span>
           </div>
           <div className="pt-2 border-t border-gray-200 flex flex-col gap-2"></div>

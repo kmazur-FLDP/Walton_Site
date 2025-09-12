@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapIcon, StarIcon, ChartBarIcon, EnvelopeIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { MapIcon, StarIcon, ChartBarIcon, EnvelopeIcon, EyeIcon, ClockIcon, HeartIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import dataService from '../services/dataService'
+import favoritesService from '../services/favoritesService'
+import { useAuth } from '../context/AuthContext'
 
 // Mini Map Preview Component
 const MapPreview = ({ county, onPreview }) => {
@@ -111,6 +113,7 @@ const MapPreview = ({ county, onPreview }) => {
 
 const LandingPage = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [counties] = useState([
     // Counties ordered by priority for Walton Global
     // Parcel counts reflect actual GeoJSON data where available
@@ -122,13 +125,111 @@ const LandingPage = () => {
   ])
 
   // Handle map preview clicks
-  const handleMapPreview = (countyName, mapData) => {
+  const handleMapPreview = (countyName) => {
+    // Track county visit for recent activity
+    trackCountyVisit(countyName)
+    
     // For now, just navigate to the county page
     // In the future, this could open a modal with a larger preview
     const county = counties.find(c => c.name === countyName)
     if (county && county.available) {
       navigate(county.path)
     }
+  }
+
+  // Recent Activity State
+  const [recentActivity, setRecentActivity] = useState({
+    recentFavorites: [],
+    countyVisits: [],
+    sessionStats: {
+      countiesVisited: 0,
+      favoritesAdded: 0,
+      startTime: new Date()
+    },
+    loading: true
+  })
+
+  // Track county visits in localStorage
+  const trackCountyVisit = (countyName) => {
+    const visits = JSON.parse(localStorage.getItem('walton_county_visits') || '[]')
+    const newVisit = {
+      county: countyName,
+      timestamp: new Date().toISOString(),
+      id: Date.now()
+    }
+    
+    // Add to beginning of array and keep only last 10
+    const updatedVisits = [newVisit, ...visits.filter(v => v.county !== countyName)].slice(0, 10)
+    localStorage.setItem('walton_county_visits', JSON.stringify(updatedVisits))
+    
+    setRecentActivity(prev => ({
+      ...prev,
+      countyVisits: updatedVisits,
+      sessionStats: {
+        ...prev.sessionStats,
+        countiesVisited: prev.sessionStats.countiesVisited + 1
+      }
+    }))
+  }
+
+  // Load recent activity data
+  useEffect(() => {
+    const loadRecentActivity = async () => {
+      if (!user) {
+        setRecentActivity(prev => ({ ...prev, loading: false }))
+        return
+      }
+
+      try {
+        // Load recent favorites
+        const favorites = await favoritesService.getUserFavorites()
+        const recentFavorites = favorites.slice(0, 5) // Show last 5 favorites
+
+        // Load county visits from localStorage
+        const countyVisits = JSON.parse(localStorage.getItem('walton_county_visits') || '[]')
+
+        // Load session stats from localStorage
+        const sessionStart = localStorage.getItem('walton_session_start')
+        const sessionStats = {
+          countiesVisited: new Set(countyVisits.map(v => v.county)).size,
+          favoritesAdded: favorites.filter(f => {
+            const createdDate = new Date(f.created_at)
+            const today = new Date()
+            return createdDate.toDateString() === today.toDateString()
+          }).length,
+          startTime: sessionStart ? new Date(sessionStart) : new Date()
+        }
+
+        // Set session start time if not exists
+        if (!sessionStart) {
+          localStorage.setItem('walton_session_start', new Date().toISOString())
+        }
+
+        setRecentActivity({
+          recentFavorites,
+          countyVisits: countyVisits.slice(0, 5), // Show last 5 visits
+          sessionStats,
+          loading: false
+        })
+      } catch (error) {
+        console.error('Error loading recent activity:', error)
+        setRecentActivity(prev => ({ ...prev, loading: false }))
+      }
+    }
+
+    loadRecentActivity()
+  }, [user])
+
+  // Format time ago
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diffInMinutes = Math.floor((now - time) / 60000)
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
   // Stats calculated from actual GeoJSON data
@@ -387,7 +488,7 @@ const LandingPage = () => {
 
           <motion.div variants={itemVariants} className="card text-center">
             <div className="w-12 h-12 bg-accent-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <div className="text-accent-600 text-xl font-bold">🏞️</div>
+              <Square3Stack3DIcon className="w-6 h-6 text-accent-600" />
             </div>
             <h3 className="text-lg font-semibold text-secondary-800 mb-2">Total Acreage</h3>
             <p className="text-3xl font-bold text-accent-600">
@@ -499,11 +600,209 @@ const LandingPage = () => {
           >
             Recent Activity
           </motion.h2>
-          <motion.div variants={itemVariants} className="text-center py-12 text-secondary-500">
-            <StarIcon className="w-12 h-12 mx-auto mb-4 text-secondary-300" />
-            <p>No recent activity to display</p>
-            <p className="text-sm mt-2">Start exploring county maps to see your activity here</p>
-          </motion.div>
+          
+          {!user ? (
+            <motion.div variants={itemVariants} className="text-center py-8 text-secondary-500">
+              <StarIcon className="w-12 h-12 mx-auto mb-4 text-secondary-300" />
+              <p className="text-lg font-medium mb-2">Sign in to track your activity</p>
+              <p className="text-sm">Your favorites, county visits, and session stats will appear here</p>
+              <button 
+                onClick={() => navigate('/login')}
+                className="mt-4 btn-primary"
+              >
+                Sign In
+              </button>
+            </motion.div>
+          ) : recentActivity.loading ? (
+            <motion.div variants={itemVariants} className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-secondary-500">Loading your recent activity...</p>
+            </motion.div>
+          ) : (
+            <motion.div variants={itemVariants} className="space-y-6">
+              {/* Session Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-primary-50 rounded-lg p-4 text-center">
+                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <MapIcon className="w-4 h-4 text-primary-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-primary-600">{recentActivity.sessionStats.countiesVisited}</div>
+                  <div className="text-sm text-primary-700">Counties Explored</div>
+                </div>
+                
+                <div className="bg-accent-50 rounded-lg p-4 text-center">
+                  <div className="w-8 h-8 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <HeartIcon className="w-4 h-4 text-accent-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-accent-600">{recentActivity.sessionStats.favoritesAdded}</div>
+                  <div className="text-sm text-accent-700">Favorites Today</div>
+                </div>
+                
+                <div className="bg-earth-50 rounded-lg p-4 text-center">
+                  <div className="w-8 h-8 bg-earth-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <ClockIcon className="w-4 h-4 text-earth-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-earth-600">
+                    {Math.floor((new Date() - recentActivity.sessionStats.startTime) / 60000)}
+                  </div>
+                  <div className="text-sm text-earth-700">Minutes Active</div>
+                </div>
+              </div>
+
+              {/* Recent Favorites and County Visits */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Recent Favorites */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                    <StarIcon className="w-5 h-5 text-yellow-500 mr-2" />
+                    Recent Favorites
+                  </h3>
+                  {recentActivity.recentFavorites.length === 0 ? (
+                    <div className="text-center py-6 text-secondary-500 bg-gray-50 rounded-lg">
+                      <HeartIcon className="w-8 h-8 mx-auto mb-2 text-secondary-300" />
+                      <p className="text-sm">No favorites yet</p>
+                      <p className="text-xs mt-1">Start exploring to save your favorite parcels</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentActivity.recentFavorites.map((favorite) => (
+                        <div key={favorite.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex-1">
+                            <div className="font-medium text-secondary-800">
+                              Parcel #{favorite.parcel_id}
+                            </div>
+                            <div className="text-sm text-secondary-600 flex items-center">
+                              <MapIcon className="w-3 h-3 mr-1" />
+                              {favorite.county}
+                              <span className="mx-2">•</span>
+                              <ClockIcon className="w-3 h-3 mr-1" />
+                              {formatTimeAgo(favorite.created_at)}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const county = counties.find(c => c.name === favorite.county)
+                              if (county) navigate(county.path)
+                            }}
+                            className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                        </div>
+                      ))}
+                      {recentActivity.recentFavorites.length > 0 && (
+                        <button 
+                          onClick={() => navigate('/favorites')}
+                          className="w-full text-center py-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View All Favorites →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent County Visits */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                    <EyeIcon className="w-5 h-5 text-blue-500 mr-2" />
+                    Recent Visits
+                  </h3>
+                  {recentActivity.countyVisits.length === 0 ? (
+                    <div className="text-center py-6 text-secondary-500 bg-gray-50 rounded-lg">
+                      <EyeIcon className="w-8 h-8 mx-auto mb-2 text-secondary-300" />
+                      <p className="text-sm">No recent visits</p>
+                      <p className="text-xs mt-1">County visits will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentActivity.countyVisits.map((visit) => (
+                        <div key={visit.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex-1">
+                            <div className="font-medium text-secondary-800">
+                              {visit.county}
+                            </div>
+                            <div className="text-sm text-secondary-600 flex items-center">
+                              <ClockIcon className="w-3 h-3 mr-1" />
+                              {formatTimeAgo(visit.timestamp)}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const county = counties.find(c => c.name === visit.county)
+                              if (county) navigate(county.path)
+                            }}
+                            className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                          >
+                            Revisit
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Quick Actions</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <button 
+                    onClick={() => navigate('/favorites')}
+                    className="flex items-center p-3 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
+                  >
+                    <StarIcon className="w-5 h-5 text-yellow-600 mr-2" />
+                    <span className="text-sm font-medium text-yellow-700">My Favorites</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      const mostVisited = recentActivity.countyVisits[0]
+                      if (mostVisited) {
+                        const county = counties.find(c => c.name === mostVisited.county)
+                        if (county) navigate(county.path)
+                      }
+                    }}
+                    disabled={recentActivity.countyVisits.length === 0}
+                    className="flex items-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <EyeIcon className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="text-sm font-medium text-blue-700">Last Visited</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigate('/citrus')} // Go to largest county
+                    className="flex items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                  >
+                    <ChartBarIcon className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="text-sm font-medium text-green-700">Most Parcels</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      // Clear recent activity
+                      localStorage.removeItem('walton_county_visits')
+                      localStorage.removeItem('walton_session_start')
+                      setRecentActivity(prev => ({
+                        ...prev,
+                        countyVisits: [],
+                        sessionStats: {
+                          countiesVisited: 0,
+                          favoritesAdded: 0,
+                          startTime: new Date()
+                        }
+                      }))
+                      localStorage.setItem('walton_session_start', new Date().toISOString())
+                    }}
+                    className="flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ClockIcon className="w-5 h-5 text-gray-600 mr-2" />
+                    <span className="text-sm font-medium text-gray-700">Reset Session</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Contact Section */}

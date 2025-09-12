@@ -72,21 +72,69 @@ class AdminService {
    */
   async getAllFavorites() {
     try {
+      console.log('AdminService: Checking admin status for getAllFavorites...')
       const isAdminUser = await this.isAdmin()
       if (!isAdminUser) throw new Error('Access denied: Admin role required')
 
+      console.log('AdminService: Fetching all favorites...')
+      
+      // First, try a simple query to see if there are any favorites at all
+      const { data: simpleFavorites, error: simpleError } = await supabase
+        .from('favorite_parcels')
+        .select('*')
+      
+      console.log('AdminService: Simple favorites query:', { 
+        data: simpleFavorites, 
+        error: simpleError, 
+        count: simpleFavorites?.length 
+      })
+
+      // Now try the join query with simplified syntax
       const { data, error } = await supabase
         .from('favorite_parcels')
         .select(`
           *,
-          profiles:user_id (
+          profiles (
             email,
             full_name
           )
         `)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      console.log('AdminService: getAllFavorites result:', { data, error, count: data?.length })
+      if (error) {
+        console.log('AdminService: Join query failed, falling back to simple query with manual joins')
+        
+        // Fallback: Get favorites and users separately, then join manually
+        const { data: favorites, error: favError } = await supabase
+          .from('favorite_parcels')
+          .select('*')
+          .order('created_at', { ascending: false })
+        
+        if (favError) throw favError
+        
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+        
+        if (usersError) throw usersError
+        
+        // Create a user lookup map
+        const userMap = {}
+        users?.forEach(user => {
+          userMap[user.id] = user
+        })
+        
+        // Join the data manually
+        const joinedData = favorites?.map(favorite => ({
+          ...favorite,
+          profiles: userMap[favorite.user_id] || null
+        })) || []
+        
+        console.log('AdminService: Manual join result:', { count: joinedData.length })
+        return joinedData
+      }
+      
       return data || []
     } catch (error) {
       console.error('Error fetching all favorites:', error)
@@ -108,7 +156,7 @@ class AdminService {
         .from('favorite_parcels')
         .select(`
           *,
-          profiles:user_id (
+          profiles (
             email,
             full_name
           )

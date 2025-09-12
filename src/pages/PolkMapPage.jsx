@@ -104,6 +104,7 @@ const PolkMapPage = () => {
         const favoriteIds = new Set(userFavorites.map(fav => fav.parcel_id))
         setFavorites(favoriteIds)
         console.log('Loaded favorites:', favoriteIds.size)
+        console.log('Polk favorite parcel IDs:', Array.from(favoriteIds), 'data types:', Array.from(favoriteIds).map(id => typeof id))
       } catch (err) {
         console.error('Error loading favorites:', err)
       }
@@ -147,7 +148,7 @@ const PolkMapPage = () => {
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
       // Get parcel address for better storage
-      const parcel = parcelData?.features?.find(f => f.properties.PARCEL_ID === parcelId)
+      const parcel = parcelData?.features?.find(f => f.properties.PARCEL_UID === parcelId)
       const parcelAddress = `${parcel?.properties?.BAS_STRT || ''}`.trim() || null
 
       // Toggle in database
@@ -184,24 +185,39 @@ const PolkMapPage = () => {
 
   // Parcel styling function
   const parcelStyle = (feature) => {
-    const parcelId = feature.properties.PARCEL_ID; // Use the correct property name from GeoJSON
+    const parcelId = feature.properties.PARCEL_UID; // Use PARCEL_UID to match ParcelInfoPanel getParcelId()
     const isSelected = selectedParcel === parcelId;
-    const isFavorite = favoriteIds.includes(parcelId);
+    // Handle both string and number comparison for favorites
+    const isFavorite = favoriteIds.includes(parcelId) || favoriteIds.includes(String(parcelId)) || favoriteIds.includes(Number(parcelId));
     
-    if (isSelected) {
+    // Debug logging for first few parcels to check styling
+    if (Math.random() < 0.001) { // Log 0.1% of parcels to avoid spam
+      console.log('PolkMapPage parcelStyle debug:', {
+        parcelId,
+        parcelIdType: typeof parcelId,
+        isSelected,
+        isFavorite,
+        favoriteIds: favoriteIds.slice(0, 5), // Show first 5 favorites
+        favoriteIdsTypes: favoriteIds.slice(0, 5).map(id => typeof id),
+        favoritesSize: favoriteIds.length
+      });
+    }
+    
+    if (isFavorite) {
+      console.log('🔵 BLUE PARCEL:', parcelId, typeof parcelId, 'matches favorite:', favoriteIds.find(id => id == parcelId)); // Log every blue parcel
       return {
-        fillColor: '#3b82f6', // Blue for selected
-        weight: 3,
-        color: '#1d4ed8',
-        fillOpacity: 0.8
-      };
-    } else if (isFavorite) {
-      return {
-        fillColor: '#f59e0b', // Amber for favorites
+        fillColor: '#3b82f6', // Blue for favorites
         weight: 2,
         opacity: 1,
-        color: '#d97706',
+        color: '#1d4ed8',
         fillOpacity: 0.7
+      };
+    } else if (isSelected) {
+      return {
+        fillColor: '#10b981', // Green for selected
+        weight: 3,
+        color: '#059669',
+        fillOpacity: 0.8
       };
     } else {
       return {
@@ -232,7 +248,7 @@ const PolkMapPage = () => {
   const onEachFeature = (feature, layer) => {
     // Add click handler for parcel selection
     layer.on('click', () => {
-      setSelectedParcel(feature.properties.PARCEL_ID)
+      setSelectedParcel(feature.properties.PARCEL_UID)
       setSelectedParcelData(feature)
       setShowInfoPanel(true)
     })
@@ -247,7 +263,7 @@ const PolkMapPage = () => {
 
     layer.on('mouseout', () => {
       // Reset to normal style unless selected
-      if (selectedParcel !== feature.properties.PARCEL_ID) {
+      if (selectedParcel !== feature.properties.PARCEL_UID) {
         layer.setStyle(parcelStyle(feature))
       }
     })
@@ -399,7 +415,7 @@ const PolkMapPage = () => {
             <LayersControl.Overlay checked name="Polk Parcels">
               {parcelData && (
                 <GeoJSON
-                  key="polk-parcels"
+                  key={`polk-parcels-${favorites.size}-${selectedParcel || 'none'}`}
                   data={parcelData}
                   style={parcelStyle}
                   onEachFeature={onEachFeature}
@@ -436,11 +452,11 @@ const PolkMapPage = () => {
             <span>Available Parcels</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
+            <div className="w-4 h-4 bg-green-500 border border-green-600 rounded"></div>
             <span>Selected Parcel</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-amber-500 border border-amber-600 rounded"></div>
+            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
             <span>Favorited Parcels</span>
           </div>
         </div>

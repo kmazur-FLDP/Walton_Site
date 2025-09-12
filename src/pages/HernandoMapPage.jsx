@@ -89,7 +89,7 @@ const HernandoMapPage = () => {
   const toggleFavorite = async (parcelId) => {
     try {
       // Get parcel address for better storage
-      const parcel = parcelData?.features?.find(f => f.properties.PARCEL_NUMBER === parcelId)
+      const parcel = parcelData?.features?.find(f => f.properties.PARCEL_UID === parcelId)
       const parcelAddress = parcel?.properties?.SITUS_ADDRESS || null
 
       // Toggle in database
@@ -140,24 +140,24 @@ const HernandoMapPage = () => {
 
   // Parcel styling function
   const parcelStyle = (feature) => {
-    const parcelId = feature.properties.PARCEL_NUMBER; // Use the correct property name from GeoJSON
+    const parcelId = feature.properties.PARCEL_UID; // Use PARCEL_UID which matches the ParcelInfoPanel getParcelId()
     const isSelected = selectedParcel === parcelId;
     const isFavorite = favoriteIds.includes(parcelId);
     
     if (isFavorite) {
       return {
-        fillColor: '#f59e0b', // Amber for favorites
+        fillColor: '#3b82f6', // Blue for favorites to match the request
         weight: 2,
         opacity: 1,
-        color: '#d97706',
+        color: '#1d4ed8',
         fillOpacity: 0.7
       };
     } else if (isSelected) {
       return {
-        fillColor: '#3b82f6', // Blue for selected
+        fillColor: '#10b981', // Green for selected
         weight: 3,
         opacity: 1,
-        color: '#1d4ed8',
+        color: '#059669',
         fillOpacity: 0.8
       };
     } else {
@@ -176,7 +176,7 @@ const HernandoMapPage = () => {
     
     // Add click handler for parcel selection and panel
     layer.on('click', () => {
-      setSelectedParcel(props.PARCEL_NUMBER)
+      setSelectedParcel(props.PARCEL_UID)
       setPanelParcel(feature)
       setShowPanel(true)
     })
@@ -193,8 +193,8 @@ const HernandoMapPage = () => {
     layer.on('mouseout', () => {
       layer.setStyle({
         weight: 2,
-        color: selectedParcel === props.PARCEL_NUMBER ? '#EF4444' : '#3B82F6',
-        fillOpacity: selectedParcel === props.PARCEL_NUMBER ? 0.7 : 0.5
+        color: selectedParcel === props.PARCEL_UID ? '#EF4444' : '#3B82F6',
+        fillOpacity: selectedParcel === props.PARCEL_UID ? 0.7 : 0.5
       })
     })
   }
@@ -357,7 +357,7 @@ const HernandoMapPage = () => {
           {/* Parcel data layer */}
           {parcelData && (
             <GeoJSON
-              key="hernando-parcels"
+              key={`hernando-parcels-${favorites.size}-${selectedParcel || 'none'}`}
               data={parcelData}
               style={parcelStyle}
               onEachFeature={onEachFeature}
@@ -380,11 +380,11 @@ const HernandoMapPage = () => {
             <span>Available Parcels</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
+            <div className="w-4 h-4 bg-green-500 border border-green-600 rounded"></div>
             <span>Selected Parcel</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-amber-500 border border-amber-600 rounded"></div>
+            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
             <span>Favorited Parcels</span>
           </div>
         </div>
@@ -395,7 +395,8 @@ const HernandoMapPage = () => {
         <ParcelInfoPanel
           parcel={panelParcel}
           county="Hernando"
-          favorites={favorites}
+          isOpen={showPanel}
+          isFavorite={favorites.has(panelParcel.properties.PARCEL_UID)}
           onClose={() => setShowPanel(false)}
           onToggleFavorite={toggleFavorite}
         />
