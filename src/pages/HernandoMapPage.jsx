@@ -9,6 +9,62 @@ import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
+// Custom ArcGIS Dynamic Layer for Map Services using ImageOverlay approach
+const createArcGISDynamicLayer = (url, options = {}) => {
+  // Create a custom layer that extends L.Layer
+  const DynamicLayer = L.Layer.extend({
+    initialize: function(url, options) {
+      this._url = url;
+      L.setOptions(this, options);
+    },
+
+    onAdd: function(map) {
+      this._map = map;
+      this._update();
+      map.on('moveend zoomend', this._update, this);
+    },
+
+    onRemove: function(map) {
+      if (this._imageOverlay) {
+        map.removeLayer(this._imageOverlay);
+      }
+      map.off('moveend zoomend', this._update, this);
+    },
+
+    _update: function() {
+      if (!this._map) return;
+      
+      const bounds = this._map.getBounds();
+      const size = this._map.getSize();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      
+      // Convert to Web Mercator (EPSG:3857)
+      const swPoint = L.CRS.EPSG3857.project(sw);
+      const nePoint = L.CRS.EPSG3857.project(ne);
+      
+      const bbox = `${swPoint.x},${swPoint.y},${nePoint.x},${nePoint.y}`;
+      
+      const imageUrl = `${this._url}/export?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${size.x},${size.y}&format=png32&transparent=true&f=image`;
+      
+      // Remove existing overlay if any
+      if (this._imageOverlay) {
+        this._map.removeLayer(this._imageOverlay);
+      }
+      
+      // Create new image overlay
+      this._imageOverlay = L.imageOverlay(imageUrl, bounds, {
+        opacity: this.options.opacity || 0.7,
+        pane: this.options.pane
+      });
+      
+      this._imageOverlay.addTo(this._map);
+    }
+  });
+
+  return new DynamicLayer(url, options);
+}
+
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -29,6 +85,9 @@ const HernandoMapPage = () => {
   const [mapReady, setMapReady] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
   const [panelParcel, setPanelParcel] = useState(null)
+  const [showWetlands, setShowWetlands] = useState(false)
+  const [wetlandsLayer, setWetlandsLayer] = useState(null)
+  const [mapInstance, setMapInstance] = useState(null)
 
   // Load Hernando parcel data when component mounts
   useEffect(() => {
@@ -86,6 +145,33 @@ const HernandoMapPage = () => {
     }
   }, [mapReady, parcelData])
 
+  // Effect to handle wetlands layer toggle
+  useEffect(() => {
+    if (!mapInstance) return
+
+    if (showWetlands && !wetlandsLayer) {
+      console.log('Adding wetlands layer to map...')
+      const layer = createArcGISDynamicLayer(
+        'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer',
+        {
+          attribution: '&copy; <a href="https://www.fws.gov/wetlands/">U.S. Fish and Wildlife Service</a> - National Wetlands Inventory',
+          opacity: 0.7,
+          zIndex: 1000
+        }
+      )
+      
+      layer.addTo(mapInstance)
+      setWetlandsLayer(layer)
+      console.log('Wetlands layer added successfully')
+      
+    } else if (!showWetlands && wetlandsLayer) {
+      console.log('Removing wetlands layer from map...')
+      mapInstance.removeLayer(wetlandsLayer)
+      setWetlandsLayer(null)
+      console.log('Wetlands layer removed successfully')
+    }
+  }, [showWetlands, mapInstance, wetlandsLayer])
+
   const toggleFavorite = async (parcelId) => {
     try {
       // Get parcel address for better storage
@@ -129,9 +215,10 @@ const HernandoMapPage = () => {
   }
 
   // Handle map ready event
-  const handleMapReady = () => {
+  const handleMapReady = (map) => {
     console.log('Map is ready')
     setMapReady(true)
+    setMapInstance(map.target)
     // If parcel data is already loaded, zoom to it
     if (parcelData) {
       setTimeout(zoomToParcelBounds, 100)
@@ -289,6 +376,8 @@ const HernandoMapPage = () => {
             opacity={0.9}
           />
 
+          {/* NWI Wetlands Layer is now handled dynamically via useEffect */}
+
           {/* 
           ESRI SOLUTIONS - Professional mapping with consistent styling:
           
@@ -372,9 +461,11 @@ const HernandoMapPage = () => {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-10">
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-10 max-w-xs">
         <h3 className="font-semibold text-sm mb-3">Legend</h3>
-        <div className="space-y-2 text-xs">
+        
+        {/* Parcel Legend */}
+        <div className="space-y-2 text-xs mb-4">
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 border border-yellow-600 rounded" style={{backgroundColor: '#ffeb3b'}}></div>
             <span>Available Parcels</span>
@@ -386,6 +477,31 @@ const HernandoMapPage = () => {
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
             <span>Favorited Parcels</span>
+          </div>
+        </div>
+
+        {/* Layer Toggles */}
+        <div className="border-t pt-3">
+          <h4 className="font-medium text-xs mb-2 text-gray-700">Environmental Layers</h4>
+          <div className="space-y-2">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showWetlands}
+                onChange={(e) => {
+                  console.log('Wetlands toggle:', e.target.checked)
+                  setShowWetlands(e.target.checked)
+                }}
+                className="w-3 h-3 text-primary-600 rounded focus:ring-primary-500"
+              />
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-blue-400 border border-blue-600 rounded opacity-70"></div>
+                <span className="text-xs">NWI Wetlands</span>
+              </div>
+            </label>
+            <div className="text-xs text-gray-500 pl-5">
+              National Wetlands Inventory
+            </div>
           </div>
         </div>
       </div>

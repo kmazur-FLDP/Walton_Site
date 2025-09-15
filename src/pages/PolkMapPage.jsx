@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, GeoJSON, LayersControl } from 'react-leaflet'
 import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outline'
@@ -8,6 +8,70 @@ import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+
+// Custom ArcGIS Dynamic Layer for Map Services using ImageOverlay approach
+const createArcGISDynamicLayer = (url, options = {}) => {
+  // Create a custom layer that extends L.Layer
+  const DynamicLayer = L.Layer.extend({
+    initialize: function(url, options) {
+      this._url = url;
+      L.setOptions(this, options);
+    },
+
+    onAdd: function(map) {
+      this._map = map;
+      this._update();
+      map.on('moveend zoomend', this._update, this);
+    },
+
+    onRemove: function(map) {
+      if (this._imageOverlay) {
+        map.removeLayer(this._imageOverlay);
+      }
+      map.off('moveend zoomend', this._update, this);
+    },
+
+    _update: function() {
+      if (!this._map) return;
+      
+      const bounds = this._map.getBounds();
+      const size = this._map.getSize();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      
+      // Convert to Web Mercator (EPSG:3857)
+      const swPoint = L.CRS.EPSG3857.project(sw);
+      const nePoint = L.CRS.EPSG3857.project(ne);
+      
+      const bbox = `${swPoint.x},${swPoint.y},${nePoint.x},${nePoint.y}`;
+      
+      const imageUrl = `${this._url}/export?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${size.x},${size.y}&format=png32&transparent=true&f=image`;
+      
+      // Remove existing overlay if any
+      if (this._imageOverlay) {
+        this._map.removeLayer(this._imageOverlay);
+      }
+      
+      // Create new image overlay
+      this._imageOverlay = L.imageOverlay(imageUrl, bounds, {
+        opacity: this.options.opacity || 0.7,
+        pane: this.options.pane
+      });
+      
+      this._imageOverlay.addTo(this._map);
+    }
+  });
+
+  return new DynamicLayer(url, options);
+}
+
+// Fix for default markers in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+})
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -32,6 +96,9 @@ const PolkMapPage = () => {
   const [mapReady, setMapReady] = useState(false)
   const [computedCenter, setComputedCenter] = useState(null)
   const [showDevelopmentAreas, setShowDevelopmentAreas] = useState(false)
+  const [showWetlands, setShowWetlands] = useState(false)
+  const [mapInstance, setMapInstance] = useState(null)
+  const [wetlandsLayer, setWetlandsLayer] = useState(null)
 
   // Color mapping for development areas (excluding RDA) - optimized for transparent overlays
   const developmentAreaColors = {
@@ -145,6 +212,33 @@ const PolkMapPage = () => {
     }
   }, [mapReady, parcelData, zoomToParcelBounds])
 
+  // Wetlands layer management
+  useEffect(() => {
+    if (!mapInstance) return
+
+    if (showWetlands) {
+      console.log('Adding wetlands layer')
+      const wetlands = createArcGISDynamicLayer(
+        'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer',
+        { opacity: 0.7 }
+      )
+      wetlands.addTo(mapInstance)
+      setWetlandsLayer(wetlands)
+    } else {
+      console.log('Removing wetlands layer')
+      if (wetlandsLayer) {
+        mapInstance.removeLayer(wetlandsLayer)
+        setWetlandsLayer(null)
+      }
+    }
+
+    return () => {
+      if (wetlandsLayer) {
+        mapInstance.removeLayer(wetlandsLayer)
+      }
+    }
+  }, [showWetlands, mapInstance])
+
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
       // Get parcel address for better storage
@@ -175,8 +269,14 @@ const PolkMapPage = () => {
   // Handle map ready event
   const handleMapReady = () => {
     console.log('Map is ready')
-  console.log('Initial map ready. Will fit to data bounds.')
+    console.log('Initial map ready. Will fit to data bounds.')
     setMapReady(true)
+    
+    // Store map instance for wetlands layer
+    if (mapRef.current) {
+      setMapInstance(mapRef.current)
+    }
+    
     // If parcel data is already loaded, zoom to it
     if (parcelData) {
       setTimeout(zoomToParcelBounds, 100)
@@ -422,6 +522,14 @@ const PolkMapPage = () => {
                 />
               )}
             </LayersControl.Overlay>
+            <LayersControl.Overlay name="NWI Wetlands">
+              <TileLayer
+                url="https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/tile/{z}/{y}/{x}?f=png"
+                attribution='&copy; <a href="https://www.fws.gov/wetlands/">U.S. Fish and Wildlife Service</a> - National Wetlands Inventory'
+                opacity={0.7}
+                crossOrigin={true}
+              />
+            </LayersControl.Overlay>
           </LayersControl>
 
           {/* Development Areas controlled by legend toggle */}
@@ -505,6 +613,28 @@ const PolkMapPage = () => {
               })}
             </div>
           )}
+        </div>
+
+        {/* Wetlands Layer Toggle */}
+        <div className="pt-2 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="wetlands-toggle"
+              checked={showWetlands}
+              onChange={(e) => {
+                console.log('Wetlands toggle:', e.target.checked)
+                setShowWetlands(e.target.checked)
+              }}
+              className="w-3 h-3"
+            />
+            <div className="flex items-center space-x-1">
+              <span className="text-xs">NWI Wetlands</span>
+            </div>
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1">
+            National Wetlands Inventory
+          </div>
         </div>
 
         {/* Debug Info */}

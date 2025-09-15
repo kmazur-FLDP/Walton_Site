@@ -9,6 +9,62 @@ import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
+// Custom ArcGIS Dynamic Layer for Map Services using ImageOverlay approach
+const createArcGISDynamicLayer = (url, options = {}) => {
+  // Create a custom layer that extends L.Layer
+  const DynamicLayer = L.Layer.extend({
+    initialize: function(url, options) {
+      this._url = url;
+      L.setOptions(this, options);
+    },
+
+    onAdd: function(map) {
+      this._map = map;
+      this._update();
+      map.on('moveend zoomend', this._update, this);
+    },
+
+    onRemove: function(map) {
+      if (this._imageOverlay) {
+        map.removeLayer(this._imageOverlay);
+      }
+      map.off('moveend zoomend', this._update, this);
+    },
+
+    _update: function() {
+      if (!this._map) return;
+      
+      const bounds = this._map.getBounds();
+      const size = this._map.getSize();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      
+      // Convert to Web Mercator (EPSG:3857)
+      const swPoint = L.CRS.EPSG3857.project(sw);
+      const nePoint = L.CRS.EPSG3857.project(ne);
+      
+      const bbox = `${swPoint.x},${swPoint.y},${nePoint.x},${nePoint.y}`;
+      
+      const imageUrl = `${this._url}/export?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${size.x},${size.y}&format=png32&transparent=true&f=image`;
+      
+      // Remove existing overlay if any
+      if (this._imageOverlay) {
+        this._map.removeLayer(this._imageOverlay);
+      }
+      
+      // Create new image overlay
+      this._imageOverlay = L.imageOverlay(imageUrl, bounds, {
+        opacity: this.options.opacity || 0.7,
+        pane: this.options.pane
+      });
+      
+      this._imageOverlay.addTo(this._map);
+    }
+  });
+
+  return new DynamicLayer(url, options);
+}
+
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -30,6 +86,9 @@ const PascoMapPage = () => {
   const [parcelCount, setParcelCount] = useState(0)
   const [mapReady, setMapReady] = useState(false)
   const [computedCenter, setComputedCenter] = useState(null)
+  const [showWetlands, setShowWetlands] = useState(false)
+  const [wetlandsLayer, setWetlandsLayer] = useState(null)
+  const [mapInstance, setMapInstance] = useState(null)
 
   // Load Pasco parcel data when component mounts
   useEffect(() => {
@@ -111,6 +170,33 @@ const PascoMapPage = () => {
     }
   }, [mapReady, parcelData, zoomToParcelBounds])
 
+  // Effect to handle wetlands layer toggle
+  useEffect(() => {
+    if (!mapInstance) return
+
+    if (showWetlands && !wetlandsLayer) {
+      console.log('Adding wetlands layer to map...')
+      const layer = createArcGISDynamicLayer(
+        'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer',
+        {
+          attribution: '&copy; <a href="https://www.fws.gov/wetlands/">U.S. Fish and Wildlife Service</a> - National Wetlands Inventory',
+          opacity: 0.7,
+          zIndex: 1000
+        }
+      )
+      
+      layer.addTo(mapInstance)
+      setWetlandsLayer(layer)
+      console.log('Wetlands layer added successfully')
+      
+    } else if (!showWetlands && wetlandsLayer) {
+      console.log('Removing wetlands layer from map...')
+      mapInstance.removeLayer(wetlandsLayer)
+      setWetlandsLayer(null)
+      console.log('Wetlands layer removed successfully')
+    }
+  }, [showWetlands, mapInstance, wetlandsLayer])
+
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
       // Get parcel address for better storage
@@ -139,10 +225,11 @@ const PascoMapPage = () => {
   const favoriteIds = Array.from(favorites)
 
   // Handle map ready event
-  const handleMapReady = () => {
+  const handleMapReady = (map) => {
     console.log('Map is ready')
-  console.log('Initial map ready. Will fit to data bounds.')
+    console.log('Initial map ready. Will fit to data bounds.')
     setMapReady(true)
+    setMapInstance(map.target)
     // If parcel data is already loaded, zoom to it
     if (parcelData) {
       setTimeout(zoomToParcelBounds, 100)
@@ -313,6 +400,8 @@ const PascoMapPage = () => {
             </LayersControl.Overlay>
           </LayersControl>
 
+          {/* NWI Wetlands Layer is now handled dynamically via useEffect */}
+
           {/* Parcel data layer */}
           {parcelData && (
             <GeoJSON
@@ -348,6 +437,29 @@ const PascoMapPage = () => {
             <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
             <span>Favorited Parcels</span>
           </div>
+          
+          {/* Wetlands Layer Toggle */}
+          <div className="pt-2 border-t border-gray-200">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="wetlands-toggle"
+                checked={showWetlands}
+                onChange={(e) => {
+                  console.log('Wetlands toggle:', e.target.checked)
+                  setShowWetlands(e.target.checked)
+                }}
+                className="w-3 h-3"
+              />
+              <div className="flex items-center space-x-1">
+                <span className="text-xs">NWI Wetlands</span>
+              </div>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-1">
+              National Wetlands Inventory
+            </div>
+          </div>
+          
           <div className="pt-2 border-t border-gray-200 flex flex-col gap-2"></div>
           {computedCenter && (
             <div className="text-[10px] text-gray-600">
