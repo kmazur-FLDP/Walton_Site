@@ -50,6 +50,12 @@ const LoginPage = () => {
           <p className="mt-2 text-sm text-gray-600">
             Secure access to your GIS data and property research
           </p>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-800">
+              <strong>Security Notice:</strong> For enhanced security, you will need to login each time you visit this site. 
+              Sessions automatically expire after 30 minutes of inactivity.
+            </p>
+          </div>
         </div>
 
         {/* Login Form */}

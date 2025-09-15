@@ -23,9 +23,11 @@ const Navbar = () => {
   }, [user])
 
   const handleSignOut = async () => {
-    const { error } = await signOut()
-    if (!error) {
-      navigate('/login')
+    if (window.confirm('Are you sure you want to logout? You will need to login again to access the portal.')) {
+      const { error } = await signOut()
+      if (!error) {
+        navigate('/login')
+      }
     }
   }
 

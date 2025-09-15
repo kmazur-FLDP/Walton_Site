@@ -14,6 +14,7 @@ import FavoritesPage from './pages/FavoritesPage'
 import AdminDashboard from './pages/AdminDashboard'
 import Navbar from './components/Navbar'
 import LoadingSpinner from './components/LoadingSpinner'
+import SessionWarning from './components/SessionWarning'
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -50,6 +51,7 @@ const AppContent = () => {
   
   return (
     <div className="min-h-screen bg-gray-50">
+      <SessionWarning />
       {user && <Navbar />}
       <Routes>
         <Route
