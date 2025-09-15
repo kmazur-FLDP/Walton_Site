@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import Navbar from './components/Navbar'
 import LoadingSpinner from './components/LoadingSpinner'
 import SessionWarning from './components/SessionWarning'
+import ConfidentialityFooter from './components/ConfidentialityFooter'
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -50,7 +51,7 @@ const AppContent = () => {
   const { user } = useAuth()
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-12">
       <SessionWarning />
       {user && <Navbar />}
       <Routes>
@@ -152,6 +153,9 @@ const AppContent = () => {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      
+      {/* Confidentiality Footer - appears on all pages */}
+      <ConfidentialityFooter />
     </div>
   )
 }

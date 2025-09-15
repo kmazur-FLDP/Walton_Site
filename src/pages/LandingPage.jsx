@@ -4,7 +4,9 @@ import { MapIcon, StarIcon, ChartBarIcon, EnvelopeIcon, EyeIcon, ClockIcon, Hear
 import { motion } from 'framer-motion'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
+import termsService from '../services/termsService'
 import { useAuth } from '../context/AuthContext'
+import TermsModal from '../components/TermsModal'
 
 // Mini Map Preview Component
 const MapPreview = ({ county, onPreview }) => {
@@ -113,7 +115,14 @@ const MapPreview = ({ county, onPreview }) => {
 
 const LandingPage = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
+  
+  // Terms and Conditions state
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
+  const [termsLoading, setTermsLoading] = useState(false)
+  const [checkingTerms, setCheckingTerms] = useState(true)
+  
   const [counties] = useState([
     // Counties ordered by priority for Walton Global
     // Parcel counts reflect actual GeoJSON data where available
@@ -170,6 +179,64 @@ const LandingPage = () => {
         countiesVisited: prev.sessionStats.countiesVisited + 1
       }
     }))
+  }
+
+  // Check if user has accepted terms
+  useEffect(() => {
+    const checkTermsAcceptance = async () => {
+      if (!user) {
+        setCheckingTerms(false)
+        return
+      }
+
+      try {
+        const hasAccepted = await termsService.hasAcceptedTerms()
+        setHasAcceptedTerms(hasAccepted)
+        
+        if (!hasAccepted) {
+          setShowTermsModal(true)
+        }
+      } catch (error) {
+        console.error('Error checking terms acceptance:', error)
+        // If there's an error, show the terms modal to be safe
+        setShowTermsModal(true)
+      } finally {
+        setCheckingTerms(false)
+      }
+    }
+
+    checkTermsAcceptance()
+  }, [user])
+
+  // Handle terms acceptance
+  const handleAcceptTerms = async () => {
+    setTermsLoading(true)
+    
+    try {
+      const result = await termsService.acceptTerms()
+      
+      if (result.success) {
+        setHasAcceptedTerms(true)
+        setShowTermsModal(false)
+        console.log('Terms accepted successfully')
+      } else {
+        console.error('Failed to record terms acceptance:', result.error)
+        alert('There was an error recording your acceptance. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error accepting terms:', error)
+      alert('There was an error recording your acceptance. Please try again.')
+    } finally {
+      setTermsLoading(false)
+    }
+  }
+
+  // Handle terms decline
+  const handleDeclineTerms = () => {
+    if (window.confirm('You must accept the terms and conditions to use this portal. If you decline, you will be logged out.')) {
+      // Sign out the user since they declined terms
+      signOut()
+    }
   }
 
   // Load recent activity data
@@ -401,6 +468,41 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+      {/* Terms and Conditions Modal */}
+      <TermsModal
+        isOpen={showTermsModal}
+        onAccept={handleAcceptTerms}
+        onDecline={handleDeclineTerms}
+        loading={termsLoading}
+      />
+      
+      {/* Content Blocking Overlay - Show if user hasn't accepted terms */}
+      {(checkingTerms || !hasAcceptedTerms) && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            {checkingTerms ? (
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Checking terms acceptance...</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Terms Required</h3>
+                <p className="text-gray-600 mb-4">
+                  You must accept the terms and conditions to access the portal.
+                </p>
+                <button
+                  onClick={() => setShowTermsModal(true)}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded font-semibold"
+                >
+                  Review Terms
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <motion.div
           variants={containerVariants}

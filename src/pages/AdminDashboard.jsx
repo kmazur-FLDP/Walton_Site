@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import adminService from '../services/adminService'
+import termsService from '../services/termsService'
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
@@ -47,6 +48,14 @@ const AdminDashboard = () => {
     password: ''
   })
   const [createUserLoading, setCreateUserLoading] = useState(false)
+  
+  // Terms acceptance tracking state
+  const [termsAcceptances, setTermsAcceptances] = useState([])
+  const [termsStats, setTermsStats] = useState({
+    totalAccepted: 0,
+    pendingAcceptance: 0,
+    acceptanceRate: 0
+  })
 
   useEffect(() => {
     const loadAdminData = async () => {
@@ -64,24 +73,40 @@ const AdminDashboard = () => {
         }
 
         // Load admin data
-        const [statsData, favoritesData, usersData, activityData] = await Promise.all([
+        const [statsData, favoritesData, usersData, activityData, termsData] = await Promise.all([
           adminService.getFavoritesStats(),
           adminService.getAllFavorites(),
           adminService.getAllUsers(),
-          adminService.getActivitySummary()
+          adminService.getActivitySummary(),
+          termsService.getAllTermsAcceptances()
         ])
 
         console.log('AdminDashboard: Loaded data:', {
           stats: statsData,
           favoritesCount: favoritesData?.length,
           usersCount: usersData?.length,
-          activity: activityData
+          activity: activityData,
+          termsCount: termsData?.length
         })
 
         setStats(statsData)
         setAllFavorites(favoritesData)
         setAllUsers(usersData)
         setActivityStats(activityData)
+        setTermsAcceptances(termsData)
+        
+        // Calculate terms stats
+        if (usersData && termsData) {
+          const totalUsers = usersData.length
+          const acceptedUsers = termsData.length
+          const acceptanceRate = totalUsers > 0 ? (acceptedUsers / totalUsers * 100) : 0
+          
+          setTermsStats({
+            totalAccepted: acceptedUsers,
+            pendingAcceptance: totalUsers - acceptedUsers,
+            acceptanceRate: acceptanceRate
+          })
+        }
       } catch (error) {
         console.error('Error loading admin data:', error)
       } finally {
@@ -290,7 +315,8 @@ const AdminDashboard = () => {
             {[
               { id: 'overview', name: 'Overview', icon: ChartBarIcon },
               { id: 'favorites', name: 'All Favorites', icon: StarIcon },
-              { id: 'users', name: 'User Management', icon: UserGroupIcon }
+              { id: 'users', name: 'User Management', icon: UserGroupIcon },
+              { id: 'terms', name: 'Terms Compliance', icon: ShieldCheckIcon }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -316,7 +342,7 @@ const AdminDashboard = () => {
             className="space-y-6"
           >
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center">
                   <UserGroupIcon className="w-8 h-8 text-blue-600" />
@@ -359,6 +385,17 @@ const AdminDashboard = () => {
                       {Object.keys(stats.countyBreakdown || {}).length}
                     </p>
                     <p className="text-xs text-purple-600">with activity</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <ShieldCheckIcon className="w-8 h-8 text-green-600" />
+                  <div className="ml-4">
+                    <h3 className="text-sm font-medium text-gray-500">Terms Compliance</h3>
+                    <p className="text-2xl font-bold text-gray-900">{termsStats.acceptanceRate.toFixed(0)}%</p>
+                    <p className="text-xs text-green-600">{termsStats.totalAccepted}/{stats.totalUsers} accepted</p>
                   </div>
                 </div>
               </div>
@@ -1006,6 +1043,134 @@ const AdminDashboard = () => {
                     </>
                   )}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Terms Compliance Tab */}
+        {activeTab === 'terms' && (
+          <div className="space-y-6">
+            {/* Terms Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card text-center"
+              >
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  {termsStats.totalAccepted}
+                </div>
+                <p className="text-gray-600">Users Accepted Terms</p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="card text-center"
+              >
+                <div className="text-3xl font-bold text-amber-600 mb-2">
+                  {termsStats.pendingAcceptance}
+                </div>
+                <p className="text-gray-600">Pending Acceptance</p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="card text-center"
+              >
+                <div className="text-3xl font-bold text-blue-600 mb-2">
+                  {termsStats.acceptanceRate.toFixed(1)}%
+                </div>
+                <p className="text-gray-600">Acceptance Rate</p>
+              </motion.div>
+            </div>
+
+            {/* Terms Acceptance Records */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="card"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <ShieldCheckIcon className="w-5 h-5 mr-2 text-green-500" />
+                  Terms Acceptance Records
+                </h3>
+              </div>
+
+              {termsAcceptances.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No terms acceptance records found
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Version
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Accepted Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User Agent
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {termsAcceptances.map((acceptance) => (
+                        <tr key={acceptance.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {acceptance.user_email}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              v{acceptance.terms_version}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(acceptance.accepted_at).toLocaleDateString()} {new Date(acceptance.accepted_at).toLocaleTimeString()}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                            {acceptance.user_agent}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Compliance Notes */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="card bg-blue-50 border border-blue-200"
+            >
+              <div className="flex items-start">
+                <ShieldCheckIcon className="w-5 h-5 text-blue-500 mt-0.5 mr-3" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 mb-2">Compliance Information</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• All terms acceptances are tracked with timestamps and user agent information</li>
+                    <li>• Users must accept terms before accessing any portal features</li>
+                    <li>• Terms specifically prohibit sharing data with external parties including real estate agents</li>
+                    <li>• Records are maintained for compliance and audit purposes</li>
+                  </ul>
+                </div>
               </div>
             </motion.div>
           </div>
