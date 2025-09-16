@@ -330,25 +330,25 @@ const CitrusMapPage = () => {
     if (isFavorite) {
       return {
         fillColor: '#3b82f6', // Blue for favorites
-        weight: 2,
+        weight: 3,
         opacity: 1,
         color: '#1d4ed8',
-        fillOpacity: 0.7
+        fillOpacity: 0.3
       };
     } else if (isSelected) {
       return {
         fillColor: '#10b981', // Green for selected
-        weight: 3,
+        weight: 4,
         color: '#059669',
-        fillOpacity: 0.8
+        fillOpacity: 0.4
       };
     } else {
       return {
         fillColor: '#ffeb3b', // Vibrant bright yellow for Citrus County
-        weight: 1,
+        weight: 2,
         opacity: 1,
         color: '#fbc02d', // Darker vibrant yellow border
-        fillOpacity: 0.7
+        fillOpacity: 0.15
       };
     }
   };
@@ -368,17 +368,17 @@ const CitrusMapPage = () => {
     // Add hover effects
     layer.on('mouseover', () => {
       layer.setStyle({
-        weight: 3,
+        weight: 4,
         color: '#3B82F6',
-        fillOpacity: 0.7
+        fillOpacity: 0.3
       })
     })
 
     layer.on('mouseout', () => {
       layer.setStyle({
-        weight: 2,
+        weight: selectedParcel === props.PARCEL_UID ? 4 : 2,
         color: selectedParcel === props.PARCEL_UID ? '#EF4444' : '#3B82F6',
-        fillOpacity: selectedParcel === props.PARCEL_UID ? 0.7 : 0.5
+        fillOpacity: selectedParcel === props.PARCEL_UID ? 0.4 : 0.15
       })
     })
   }
@@ -501,7 +501,7 @@ const CitrusMapPage = () => {
         showWetlands={showWetlands}
         onToggleWetlands={() => setShowWetlands(!showWetlands)}
         showDevelopmentAreas={false}
-        onToggleDevelopmentAreas={() => {}}
+        onToggleDevelopmentAreas={null}
       />
 
       {/* Parcel Information Panel */}

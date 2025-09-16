@@ -420,25 +420,25 @@ const PolkMapPage = () => {
       console.log('🔵 BLUE PARCEL:', parcelId, typeof parcelId, 'matches favorite:', favoriteIds.find(id => id == parcelId)); // Log every blue parcel
       return {
         fillColor: '#3b82f6', // Blue for favorites
-        weight: 2,
+        weight: 3,
         opacity: 1,
         color: '#1d4ed8',
-        fillOpacity: 0.7
+        fillOpacity: 0.3
       };
     } else if (isSelected) {
       return {
         fillColor: '#10b981', // Green for selected
-        weight: 3,
+        weight: 4,
         color: '#059669',
-        fillOpacity: 0.8
+        fillOpacity: 0.4
       };
     } else {
       return {
         fillColor: '#ffeb3b', // Bright yellow for Polk County parcels
-        weight: 1,
+        weight: 2,
         opacity: 1,
         color: '#f57f17', // Darker yellow border
-        fillOpacity: 0.7
+        fillOpacity: 0.15
       };
     }
   };
@@ -469,8 +469,8 @@ const PolkMapPage = () => {
     // Add hover effects
     layer.on('mouseover', () => {
       layer.setStyle({
-        weight: 3,
-        fillOpacity: 0.8
+        weight: 4,
+        fillOpacity: 0.3
       })
     })
 
