@@ -6,6 +6,7 @@ import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
+import MapLegend from '../components/MapLegend'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -661,129 +662,14 @@ const PolkMapPage = () => {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-20 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-20 max-w-xs">
-        <h3 className="font-semibold text-sm mb-3">Legend</h3>
-        
-        {/* Parcel Legend */}
-        <div className="space-y-2 text-xs">
-          <h4 className="font-medium text-xs text-gray-700">Parcels</h4>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border border-yellow-600 rounded" style={{backgroundColor: '#ffeb3b'}}></div>
-            <span>Available Parcels</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-500 border border-green-600 rounded"></div>
-            <span>Selected Parcel</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
-            <span>Favorited Parcels</span>
-          </div>
-        </div>
-
-        {/* Development Areas Toggle */}
-        <div className="space-y-2 text-xs border-t border-gray-200 pt-2">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-xs text-gray-700">Development Boundaries</h4>
-            <button
-              onClick={() => setShowDevelopmentAreas(!showDevelopmentAreas)}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                showDevelopmentAreas 
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {showDevelopmentAreas ? 'Hide' : 'Show'}
-            </button>
-          </div>
-          
-          {showDevelopmentAreas && (
-            <div className="space-y-1 pl-2">
-              {Object.entries(developmentAreaColors).map(([code, color]) => {
-                const descriptions = {
-                  'CITY': 'City',
-                  'NUSA': 'Neighborhood Utility Service Areas',
-                  'SDA': 'Suburban Development Area',
-                  'TSDA': 'Transit Supportive Development Areas',
-                  'UEA': 'Utility Enclave Areas',
-                  'UGA': 'Urban Growth Area'
-                  // RDA removed
-                }
-                return (
-                  <div key={code} className="flex items-center space-x-2">
-                    <div 
-                      className="w-4 h-4 border rounded"
-                      style={{
-                        backgroundColor: color,
-                        borderColor: color,
-                        opacity: 0.4 // Match the transparent styling
-                      }}
-                    ></div>
-                    <span className="text-[10px]">{descriptions[code] || code}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Environmental Layers Toggle */}
-        <div className="pt-2 border-t border-gray-200">
-          <h4 className="font-medium text-xs mb-2 text-gray-700">Environmental Layers</h4>
-          <div className="space-y-2">
-            {/* Wetlands Toggle */}
-            <div 
-              onClick={() => setShowWetlands(!showWetlands)}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <div 
-                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
-                  showWetlands ? 'bg-blue-400 border-blue-600' : 'bg-white'
-                }`}
-              >
-                {showWetlands && <span className="text-white font-bold text-xs">✓</span>}
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-blue-400 border border-blue-600 rounded opacity-70"></div>
-                <span className="text-xs">NWI Wetlands</span>
-              </div>
-            </div>
-            <div className="text-xs text-gray-500 pl-6">
-              National Wetlands Inventory
-            </div>
-            
-            {/* Floodplain Toggle */}
-            <div 
-              onClick={() => setShowFloodplain(!showFloodplain)}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <div 
-                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
-                  showFloodplain ? 'bg-blue-500 border-blue-600' : 'bg-white'
-                }`}
-              >
-                {showFloodplain && <span className="text-white font-bold text-xs">✓</span>}
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-blue-600 border border-blue-800 rounded opacity-80"></div>
-                <span className="text-xs">SWFWMD Floodplain</span>
-              </div>
-            </div>
-            <div className="text-xs text-gray-500 pl-6">
-              Southwest Florida Water Management District
-            </div>
-          </div>
-        </div>
-
-        {/* Debug Info */}
-        <div className="pt-2 border-t border-gray-200">
-          {computedCenter && (
-            <div className="text-[10px] text-gray-600">
-              Center: {computedCenter[0].toFixed(4)}, {computedCenter[1].toFixed(4)}
-            </div>
-          )}
-        </div>
-      </div>
+      <MapLegend 
+        showFloodplain={showFloodplain}
+        onToggleFloodplain={() => setShowFloodplain(!showFloodplain)}
+        showWetlands={showWetlands}
+        onToggleWetlands={() => setShowWetlands(!showWetlands)}
+        showDevelopmentAreas={showDevelopmentAreas}
+        onToggleDevelopmentAreas={() => setShowDevelopmentAreas(!showDevelopmentAreas)}
+      />
 
       {/* Parcel Information Panel */}
       <ParcelInfoPanel

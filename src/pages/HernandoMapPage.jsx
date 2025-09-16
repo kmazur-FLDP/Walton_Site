@@ -6,6 +6,7 @@ import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
+import MapLegend from '../components/MapLegend'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -619,79 +620,14 @@ const HernandoMapPage = () => {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-20 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-20 max-w-xs">
-        <h3 className="font-semibold text-sm mb-3">Legend</h3>
-        
-        {/* Parcel Legend */}
-        <div className="space-y-2 text-xs mb-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border border-yellow-600 rounded" style={{backgroundColor: '#ffeb3b'}}></div>
-            <span>Available Parcels</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-500 border border-green-600 rounded"></div>
-            <span>Selected Parcel</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
-            <span>Favorited Parcels</span>
-          </div>
-          {showFloodplain && (
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded opacity-60"></div>
-              <span>SWFWMD Floodplain</span>
-            </div>
-          )}
-        </div>
-
-        {/* Layer Toggles */}
-        <div className="border-t pt-3">
-          <h4 className="font-medium text-xs mb-2 text-gray-700">Environmental Layers</h4>
-          <div className="space-y-2">
-            {/* Wetlands Toggle */}
-            <div 
-              onClick={() => setShowWetlands(!showWetlands)}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <div 
-                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
-                  showWetlands ? 'bg-blue-400 border-blue-600' : 'bg-white'
-                }`}
-              >
-                {showWetlands && <span className="text-white font-bold text-xs">✓</span>}
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-blue-400 border border-blue-600 rounded opacity-70"></div>
-                <span className="text-xs">NWI Wetlands</span>
-              </div>
-            </div>
-            <div className="text-xs text-gray-500 pl-6">
-              National Wetlands Inventory
-            </div>
-            
-            {/* Floodplain Toggle */}
-            <div 
-              onClick={() => setShowFloodplain(!showFloodplain)}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <div 
-                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
-                  showFloodplain ? 'bg-blue-500 border-blue-600' : 'bg-white'
-                }`}
-              >
-                {showFloodplain && <span className="text-white font-bold text-xs">✓</span>}
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-blue-500 border border-blue-600 rounded opacity-70"></div>
-                <span className="text-xs">SWFWMD Floodplain</span>
-              </div>
-            </div>
-            <div className="text-xs text-gray-500 pl-5">
-              Southwest Florida Water Management District
-            </div>
-          </div>
-        </div>
-      </div>
+      <MapLegend 
+        showFloodplain={showFloodplain}
+        onToggleFloodplain={() => setShowFloodplain(!showFloodplain)}
+        showWetlands={showWetlands}
+        onToggleWetlands={() => setShowWetlands(!showWetlands)}
+        showDevelopmentAreas={false}
+        onToggleDevelopmentAreas={() => {}}
+      />
 
       {/* Parcel Information Panel */}
       {showPanel && panelParcel && (

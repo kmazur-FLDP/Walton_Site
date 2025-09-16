@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import { MapSkeleton } from '../components/SkeletonLoader'
+import MapLegend from '../components/MapLegend'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -494,89 +495,14 @@ const CitrusMapPage = () => {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-20 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-10 space-y-3">
-        <h3 className="font-semibold text-sm mb-3">Legend</h3>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border border-yellow-600 rounded" style={{backgroundColor: '#ffeb3b'}}></div>
-            <span>Available Parcels</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-500 border border-green-600 rounded"></div>
-            <span>Selected Parcel</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
-            <span>Favorited Parcels</span>
-          </div>
-          
-          {/* Environmental Layers */}
-          <div className="pt-2 border-t border-gray-200">
-            <div className="space-y-2 text-xs mb-4">
-              <h4 className="font-medium text-xs text-gray-700">Environmental Layers</h4>
-              
-              {/* Wetlands Toggle */}
-              <div 
-                className={`flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
-                  showWetlands ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 hover:bg-gray-100'
-                }`}
-                onClick={() => {
-                  console.log('Wetlands checkbox clicked:', !showWetlands)
-                  setShowWetlands(!showWetlands)
-                }}
-              >
-                <div 
-                  className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-all ${
-                    showWetlands 
-                      ? 'bg-blue-500 border-blue-500 text-white' 
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  {showWetlands && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <span>NWI Wetlands</span>
-              </div>
-              
-              {/* Floodplain Toggle */}
-              <div 
-                className={`flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
-                  showFloodplain ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 hover:bg-gray-100'
-                }`}
-                onClick={() => {
-                  console.log('Floodplain checkbox clicked:', !showFloodplain)
-                  setShowFloodplain(!showFloodplain)
-                }}
-              >
-                <div 
-                  className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-all ${
-                    showFloodplain 
-                      ? 'bg-blue-500 border-blue-500 text-white' 
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  {showFloodplain && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <span>SWFWMD Floodplain</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="pt-2 border-t border-gray-200 flex flex-col gap-2"></div>
-          {computedCenter && (
-            <div className="text-[10px] text-gray-600">
-              Center: {computedCenter[0].toFixed(4)}, {computedCenter[1].toFixed(4)}
-            </div>
-          )}
-        </div>
-      </div>
+      <MapLegend 
+        showFloodplain={showFloodplain}
+        onToggleFloodplain={() => setShowFloodplain(!showFloodplain)}
+        showWetlands={showWetlands}
+        onToggleWetlands={() => setShowWetlands(!showWetlands)}
+        showDevelopmentAreas={false}
+        onToggleDevelopmentAreas={() => {}}
+      />
 
       {/* Parcel Information Panel */}
       {showPanel && panelParcel && (
