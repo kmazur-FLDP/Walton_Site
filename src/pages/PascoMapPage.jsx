@@ -211,7 +211,7 @@ const PascoMapPage = () => {
           const { PMTiles } = await import('pmtiles')
           const pmtiles = new PMTiles('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles')
           
-          const header = await pmtiles.getHeader()
+          // Get metadata for layer info
           const metadata = await pmtiles.getMetadata()
           console.log('PMTiles Metadata:', metadata)
           

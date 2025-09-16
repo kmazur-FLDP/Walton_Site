@@ -1,117 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapIcon, StarIcon, ChartBarIcon, EnvelopeIcon, EyeIcon, ClockIcon, HeartIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import termsService from '../services/termsService'
 import { useAuth } from '../context/AuthContext'
 import TermsModal from '../components/TermsModal'
-
-// Mini Map Preview Component
-const MapPreview = ({ county, onPreview }) => {
-  const [isHovered, setIsHovered] = useState(false)
-  
-  // County center coordinates for map previews
-  const countyData = {
-    'Pasco County': { 
-      center: [28.3507, -82.4572], 
-      zoom: 10,
-      color: '#ffeb3b',
-      mapUrl: '/pasco'
-    },
-    'Polk County': { 
-      center: [28.0836, -81.5378], 
-      zoom: 9,
-      color: '#ffeb3b',
-      mapUrl: '/polk'
-    },
-    'Hernando County': { 
-      center: [28.5584, -82.4511], 
-      zoom: 10,
-      color: '#22c55e',
-      mapUrl: '/hernando'
-    },
-    'Citrus County': { 
-      center: [28.9005, -82.4808], 
-      zoom: 10,
-      color: '#ef4444',
-      mapUrl: '/citrus'
-    },
-    'Manatee County': { 
-      center: [27.4989, -82.5748], 
-      zoom: 10,
-      color: '#3b82f6',
-      mapUrl: '/manatee'
-    }
-  }
-  
-  const data = countyData[county.name]
-  if (!data) return null
-  
-  return (
-    <div className="relative">
-      {/* Mini Map Container */}
-      <div 
-        className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden relative cursor-pointer group"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={() => onPreview && onPreview(county.name, data)}
-      >
-        {/* Simulated Map Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-50 to-blue-100">
-          {/* Simulated County Shape */}
-          <div 
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 rounded-lg opacity-80"
-            style={{
-              left: '50%',
-              top: '45%',
-              width: '60%',
-              height: '50%',
-              backgroundColor: data.color,
-              border: `2px solid ${data.color}`,
-              filter: 'brightness(0.9)'
-            }}
-          ></div>
-          
-          {/* Parcel Dots Simulation */}
-          {Array.from({ length: Math.min(county.parcels, 15) }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full opacity-60"
-              style={{
-                backgroundColor: data.color,
-                left: `${30 + (Math.random() * 40)}%`,
-                top: `${25 + (Math.random() * 50)}%`,
-                filter: 'brightness(0.7)'
-              }}
-            ></div>
-          ))}
-        </div>
-        
-        {/* Hover Overlay */}
-        <div className={`absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center ${isHovered ? 'bg-opacity-20' : ''}`}>
-          {isHovered && (
-            <div className="bg-white bg-opacity-90 rounded-lg px-3 py-2 text-sm font-medium text-gray-900 flex items-center space-x-2">
-              <EyeIcon className="w-4 h-4" />
-              <span>Quick Preview</span>
-            </div>
-          )}
-        </div>
-        
-        {/* County Label */}
-        <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 rounded px-2 py-1 text-xs font-medium text-gray-900">
-          {county.name.replace(' County', '')}
-        </div>
-        
-        {/* Parcel Count Badge */}
-        <div className="absolute top-2 right-2 bg-primary-600 text-white rounded-full text-xs px-2 py-1 font-medium">
-          {county.parcels}
-        </div>
-      </div>
-    </div>
-  )
-}
+import { ProgressSkeleton, CardSkeleton, ActivitySkeleton } from '../components/SkeletonLoader'
+import { NoActivityState } from '../components/EmptyState'
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -133,19 +31,6 @@ const LandingPage = () => {
     { name: 'Manatee County', parcels: 12, available: true, path: '/manatee' }, // Actual count from GeoJSON
   ])
 
-  // Handle map preview clicks
-  const handleMapPreview = (countyName) => {
-    // Track county visit for recent activity
-    trackCountyVisit(countyName)
-    
-    // For now, just navigate to the county page
-    // In the future, this could open a modal with a larger preview
-    const county = counties.find(c => c.name === countyName)
-    if (county && county.available) {
-      navigate(county.path)
-    }
-  }
-
   // Recent Activity State
   const [recentActivity, setRecentActivity] = useState({
     recentFavorites: [],
@@ -157,29 +42,6 @@ const LandingPage = () => {
     },
     loading: true
   })
-
-  // Track county visits in localStorage
-  const trackCountyVisit = (countyName) => {
-    const visits = JSON.parse(localStorage.getItem('walton_county_visits') || '[]')
-    const newVisit = {
-      county: countyName,
-      timestamp: new Date().toISOString(),
-      id: Date.now()
-    }
-    
-    // Add to beginning of array and keep only last 10
-    const updatedVisits = [newVisit, ...visits.filter(v => v.county !== countyName)].slice(0, 10)
-    localStorage.setItem('walton_county_visits', JSON.stringify(updatedVisits))
-    
-    setRecentActivity(prev => ({
-      ...prev,
-      countyVisits: updatedVisits,
-      sessionStats: {
-        ...prev.sessionStats,
-        countiesVisited: prev.sessionStats.countiesVisited + 1
-      }
-    }))
-  }
 
   // Check if user has accepted terms
   useEffect(() => {
@@ -299,13 +161,20 @@ const LandingPage = () => {
     return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
-  // Stats calculated from actual GeoJSON data
+  // Stats calculated from actual GeoJSON data with progressive loading
   const [stats, setStats] = useState({
     totalParcels: 0,
     totalAcres: 0,
     avgAcreage: 0,
-    loading: true
+    loading: true,
+    countiesLoaded: 0,
+    totalCounties: 5,
+    loadingCounty: ''
   })
+
+  // Cache for county data to avoid reloading
+  // eslint-disable-next-line no-unused-vars
+  const countyCache = useRef(new Map())
 
   // Progress tracking for data loading
   const [loadingProgress, setLoadingProgress] = useState({
@@ -633,62 +502,75 @@ const LandingPage = () => {
                 }`}
                 onClick={() => county.available && navigate(county.path)}
               >
-                {/* Map Preview */}
-                <div className="mb-4">
-                  <MapPreview county={county} onPreview={handleMapPreview} />
-                </div>
-
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className={`text-lg font-semibold transition-colors ${
-                    county.available 
-                      ? 'text-secondary-800 group-hover:text-primary-600' 
-                      : 'text-secondary-400'
-                  }`}>
-                    {county.name}
-                  </h3>
-                  <div className="flex items-center space-x-2">
-                    {!county.available && (
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                        Coming Soon
-                      </span>
-                    )}
-                    <MapIcon className={`w-6 h-6 transition-colors ${
+                {/* County Header */}
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                       county.available 
-                        ? 'text-gray-400 group-hover:text-primary-600' 
-                        : 'text-gray-300'
-                    }`} />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Available Parcels:</span>
-                    <span className={`font-medium ${county.available ? 'text-gray-900' : 'text-gray-500'}`}>
-                      {county.parcels.toLocaleString()}
-                    </span>
+                        ? 'bg-primary-100 group-hover:bg-primary-200' 
+                        : 'bg-gray-100'
+                    } transition-colors`}>
+                      <MapIcon className={`w-6 h-6 ${
+                        county.available 
+                          ? 'text-primary-600 group-hover:text-primary-700' 
+                          : 'text-gray-400'
+                      } transition-colors`} />
+                    </div>
+                    <div>
+                      <h3 className={`text-xl font-bold transition-colors ${
+                        county.available 
+                          ? 'text-gray-900 group-hover:text-primary-600' 
+                          : 'text-gray-400'
+                      }`}>
+                        {county.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {county.available ? 'Interactive Map Available' : 'Coming Soon'}
+                      </p>
+                    </div>
                   </div>
                   
-                  {/* Additional county info */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className={`font-medium ${county.available ? 'text-green-600' : 'text-gray-500'}`}>
-                      {county.available ? 'Ready' : 'Coming Soon'}
+                  {!county.available && (
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
+                      Coming Soon
                     </span>
+                  )}
+                </div>
+                
+                {/* County Stats */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Square3Stack3DIcon className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-600">Parcels</span>
+                    </div>
+                    <div className={`text-2xl font-bold ${county.available ? 'text-gray-900' : 'text-gray-500'}`}>
+                      {county.parcels.toLocaleString()}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <ChartBarIcon className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-600">Status</span>
+                    </div>
+                    <div className={`text-sm font-semibold ${county.available ? 'text-green-600' : 'text-gray-500'}`}>
+                      {county.available ? 'Active' : 'Pending'}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <button 
-                    className={`w-full transition-shadow ${
-                      county.available 
-                        ? 'btn-primary group-hover:shadow-md' 
-                        : 'bg-gray-200 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed'
-                    }`}
-                    disabled={!county.available}
-                  >
-                    {county.available ? 'Explore Map Data' : 'Coming Soon'}
-                  </button>
-                </div>
+                {/* Action Button */}
+                <button 
+                  className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
+                    county.available 
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow-md' 
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={!county.available}
+                >
+                  {county.available ? 'Explore County Data' : 'Available Soon'}
+                </button>
               </motion.div>
             ))}
           </div>

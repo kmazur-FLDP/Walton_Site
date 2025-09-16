@@ -6,6 +6,7 @@ import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
+import { MapSkeleton } from '../components/SkeletonLoader'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -99,10 +100,8 @@ const CitrusMapPage = () => {
         setLoading(true)
         setError(null)
 
-        console.log('Loading Citrus parcel data...')
         const parcels = await dataService.loadCitrusParcels()
         if (parcels) {
-          console.log('Loaded parcels:', parcels.features?.length || 0)
           setParcelData(parcels)
           setParcelCount(parcels.features?.length || 0)
           const bounds = dataService.getBounds(parcels)
@@ -127,11 +126,9 @@ const CitrusMapPage = () => {
   useEffect(() => {
     const loadFavorites = async () => {
       try {
-        console.log('Loading Citrus favorites...')
         const userFavorites = await favoritesService.getFavoritesByCounty('Citrus')
         const favoriteIds = new Set(userFavorites.map(fav => fav.parcel_id))
         setFavorites(favoriteIds)
-        console.log('Loaded favorites:', favoriteIds.size)
       } catch (err) {
         console.error('Error loading favorites:', err)
       }
@@ -146,29 +143,14 @@ const CitrusMapPage = () => {
     if (parcelData && mapRef.current) {
       const bounds = dataService.getBounds(parcelData)
       if (bounds) {
-        console.log('=== CITRUS BOUNDS ANALYSIS ===')
-        console.log('Calculated bounds:', bounds)
-        console.log('Southwest corner (lat, lng):', bounds[0])
-        console.log('Northeast corner (lat, lng):', bounds[1])
-        console.log('Number of features:', parcelData.features?.length)
-        const [[minLat, minLng],[maxLat,maxLng]] = bounds
-        const centerLat = (minLat+maxLat)/2
-        const centerLng = (minLng+maxLng)/2
-        console.log(`Calculated center: [${centerLat}, ${centerLng}]`)
-        console.log('Calling fitBounds with padding [40,40] and maxZoom 14...')
         mapRef.current.fitBounds(bounds, { padding: [40,40], maxZoom: 14 })
-        setTimeout(() => {
-          const c = mapRef.current.getCenter()
-          console.log('Post-fit center:', c)
-        }, 600)
       }
     }
   }, [parcelData])
 
   useEffect(() => {
     if (mapReady && parcelData) {
-      console.log('Both map and parcel data are ready - zooming to bounds')
-      setTimeout(zoomToParcelBounds, 500) // Increased delay for better reliability
+      setTimeout(zoomToParcelBounds, 500) // Delay for better reliability
     }
   }, [mapReady, parcelData, zoomToParcelBounds])
 
@@ -177,7 +159,6 @@ const CitrusMapPage = () => {
     if (!mapInstance) return
 
     if (showWetlands) {
-      console.log('Adding wetlands layer')
       const wetlands = createArcGISDynamicLayer(
         'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer',
         { opacity: 0.7 }
@@ -185,7 +166,6 @@ const CitrusMapPage = () => {
       wetlands.addTo(mapInstance)
       setWetlandsLayer(wetlands)
     } else {
-      console.log('Removing wetlands layer')
       if (wetlandsLayer) {
         mapInstance.removeLayer(wetlandsLayer)
         setWetlandsLayer(null)
@@ -193,27 +173,22 @@ const CitrusMapPage = () => {
     }
 
     return () => {
-      if (wetlandsLayer) {
+      if (wetlandsLayer && mapInstance) {
         mapInstance.removeLayer(wetlandsLayer)
       }
     }
-  }, [showWetlands, mapInstance])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showWetlands, mapInstance]) // wetlandsLayer intentionally omitted to prevent infinite loop
 
   // Floodplain layer management using PMTiles
   useEffect(() => {
     if (!mapInstance) return
 
     if (showFloodplain && !floodplainLayer) {
-      console.log('Adding floodplain layer to map...')
       const loadFloodplain = async () => {
         try {
-          console.log('Loading PMTiles floodplain data...')
           const { PMTiles } = await import('pmtiles')
           const pmtiles = new PMTiles('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles')
-          
-          const header = await pmtiles.getHeader()
-          const metadata = await pmtiles.getMetadata()
-          console.log('PMTiles Metadata:', metadata)
           
           // Try to use leafletRasterLayer if it exists
           let layer
@@ -226,11 +201,8 @@ const CitrusMapPage = () => {
               minZoom: 5
             })
             
-            console.log('PMTiles floodplain layer created - supporting zoom levels 5-20')
-            console.log('PMTiles floodplain layer created successfully')
-            
-          } catch (rasterError) {
-            console.log('leafletRasterLayer not available:', rasterError.message, 'trying custom implementation...')
+          } catch {
+            // Custom tile layer implementation
             
             // Custom tile layer implementation
             const CustomPMTilesLayer = L.TileLayer.extend({
@@ -280,10 +252,7 @@ const CitrusMapPage = () => {
                   tileLayer.style.zIndex = '1000'
                 }
               })
-              console.log('Set floodplain layer z-index to 1000')
             }
-            
-            console.log('PMTiles floodplain layer added successfully')
           }, 100)
           
           setFloodplainLayer(layer)
@@ -296,7 +265,6 @@ const CitrusMapPage = () => {
       loadFloodplain()
       
     } else if (!showFloodplain && floodplainLayer) {
-      console.log('Removing floodplain layer from map...')
       if (mapInstance && floodplainLayer) {
         mapInstance.removeLayer(floodplainLayer)
         setFloodplainLayer(null)
@@ -308,8 +276,8 @@ const CitrusMapPage = () => {
         mapInstance.removeLayer(floodplainLayer)
       }
     }
-    // Note: floodplainLayer intentionally omitted from dependencies to prevent infinite loop
-  }, [showFloodplain, mapInstance])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFloodplain, mapInstance]) // floodplainLayer intentionally omitted to prevent infinite loop
 
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
@@ -328,7 +296,6 @@ const CitrusMapPage = () => {
         newFavorites.delete(parcelId)
       }
       setFavorites(newFavorites)
-      console.log(`Parcel ${parcelId} ${isNowFavorited ? 'added to' : 'removed from'} favorites`)
     } catch (error) {
       console.error('Error toggling favorite:', error)
       // Could show a toast notification here
@@ -342,7 +309,6 @@ const CitrusMapPage = () => {
 
   // Handle map ready event
   const handleMapReady = (map) => {
-    console.log('Map is ready')
     setMapReady(true)
     
     // Store map instance for environmental layers
@@ -417,14 +383,7 @@ const CitrusMapPage = () => {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Citrus County parcels...</p>
-        </div>
-      </div>
-    )
+    return <MapSkeleton />
   }
 
   if (error) {

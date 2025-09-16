@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { StarIcon, MapIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { MapIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion'
 import favoritesService from '../services/favoritesService'
+import { CardSkeleton } from '../components/SkeletonLoader'
+import { NoFavoritesState, DataErrorState } from '../components/EmptyState'
 
 const FavoritesPage = () => {
   const navigate = useNavigate()
@@ -42,10 +45,21 @@ const FavoritesPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your favorites...</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header Skeleton */}
+        <div className="bg-white shadow-lg border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+          </div>
+        </div>
+        
+        {/* Content Skeleton */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            {[1, 2, 3].map(i => (
+              <CardSkeleton key={i} height="200px" />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -53,12 +67,31 @@ const FavoritesPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            <h2 className="font-bold">Error Loading Favorites</h2>
-            <p>{error}</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-lg border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeftIcon className="h-5 w-5 mr-2" />
+                  Back to Dashboard
+                </button>
+              </div>
+            </div>
           </div>
+        </div>
+        
+        {/* Error State */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <DataErrorState
+            title="Error Loading Favorites"
+            description={error}
+            onRetry={() => window.location.reload()}
+          />
         </div>
       </div>
     )
@@ -91,21 +124,7 @@ const FavoritesPage = () => {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {favorites.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12"
-          >
-            <StarIcon className="w-24 h-24 mx-auto mb-6 text-gray-300" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">No Favorites Yet</h2>
-            <p className="text-gray-600 mb-6">Start exploring county maps and favorite parcels that interest you.</p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="btn-primary"
-            >
-              Explore Counties
-            </button>
-          </motion.div>
+          <NoFavoritesState onExplore={() => navigate('/dashboard')} />
         ) : (
           <div className="space-y-6">
             {/* Group favorites by county */}

@@ -36,7 +36,6 @@ const createArcGISDynamicLayer = (url, options = {}) => {
 
       const bounds = this._map.getBounds();
       const size = this._map.getSize();
-      const zoom = this._map.getZoom();
 
       // ArcGIS REST API export parameters
       const params = {
@@ -264,8 +263,8 @@ const MapPage = () => {
     fillOpacity: 0.1
   }
 
-  // Style for parcels
-  const parcelStyle = (feature) => ({
+  // Style for parcels - constant styling for all parcels
+  const parcelStyle = () => ({
     fillColor: '#22c55e',
     weight: 1,
     opacity: 1,

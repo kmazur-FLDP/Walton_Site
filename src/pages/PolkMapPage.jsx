@@ -239,7 +239,8 @@ const PolkMapPage = () => {
         mapInstance.removeLayer(wetlandsLayer)
       }
     }
-  }, [showWetlands, mapInstance])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showWetlands, mapInstance]) // wetlandsLayer intentionally omitted to prevent infinite loop
 
   // Effect to handle floodplain layer toggle
   useEffect(() => {
@@ -253,7 +254,7 @@ const PolkMapPage = () => {
           const { PMTiles } = await import('pmtiles')
           const pmtiles = new PMTiles('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles')
           
-          const header = await pmtiles.getHeader()
+          // Get metadata for layer info
           const metadata = await pmtiles.getMetadata()
           console.log('PMTiles Metadata:', metadata)
           
@@ -350,8 +351,8 @@ const PolkMapPage = () => {
         mapInstance.removeLayer(floodplainLayer)
       }
     }
-    // Note: floodplainLayer intentionally omitted from dependencies to prevent infinite loop
-  }, [showFloodplain, mapInstance])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFloodplain, mapInstance]) // floodplainLayer intentionally omitted to prevent infinite loop
 
   const toggleFavorite = useCallback(async (parcelId) => {
     try {

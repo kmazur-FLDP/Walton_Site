@@ -17,9 +17,12 @@ import {
   ClockIcon,
   UserPlusIcon
 } from '@heroicons/react/24/outline'
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion'
 import adminService from '../services/adminService'
 import termsService from '../services/termsService'
+import { CardSkeleton, TableSkeleton } from '../components/SkeletonLoader'
+import { AdminOnlyState, DataErrorState } from '../components/EmptyState'
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
@@ -261,10 +264,22 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header Skeleton */}
+        <div className="bg-white shadow-lg border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          </div>
+        </div>
+        
+        {/* Content Skeleton */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map(i => (
+              <CardSkeleton key={i} height="120px" />
+            ))}
+          </div>
+          <TableSkeleton rows={10} />
         </div>
       </div>
     )
@@ -272,12 +287,9 @@ const AdminDashboard = () => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            <h2 className="font-bold">Access Denied</h2>
-            <p>You need admin privileges to access this page.</p>
-          </div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <AdminOnlyState />
         </div>
       </div>
     )

@@ -154,7 +154,8 @@ const ManateeMapPage = () => {
       console.log('Both map and parcel data are ready - zooming to bounds')
       setTimeout(zoomToParcelBounds, 200)
     }
-  }, [mapReady, parcelData])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, parcelData]) // zoomToParcelBounds intentionally omitted as it's stable via useCallback
 
   // Effect to handle wetlands layer toggle
   useEffect(() => {
