@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet'
 import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outline'
@@ -6,6 +6,75 @@ import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+
+// Custom ArcGIS Dynamic Layer for Map Services using ImageOverlay approach
+const createArcGISDynamicLayer = (url, options = {}) => {
+  // Create a custom layer that extends L.Layer
+  const DynamicLayer = L.Layer.extend({
+    initialize: function(url, options) {
+      this._url = url;
+      L.setOptions(this, options);
+    },
+
+    onAdd: function(map) {
+      this._map = map;
+      this._update();
+      map.on('moveend', this._update, this);
+      map.on('zoomend', this._update, this);
+    },
+
+    onRemove: function(map) {
+      if (this._imageOverlay) {
+        map.removeLayer(this._imageOverlay);
+      }
+      map.off('moveend', this._update, this);
+      map.off('zoomend', this._update, this);
+    },
+
+    _update: function() {
+      if (!this._map) return;
+
+      const bounds = this._map.getBounds();
+      const size = this._map.getSize();
+      const zoom = this._map.getZoom();
+
+      // ArcGIS REST API export parameters
+      const params = {
+        bbox: `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+        bboxSR: '4326',
+        layers: 'show:0',
+        layerDefs: '',
+        size: `${size.x},${size.y}`,
+        imageSR: '4326',
+        format: 'png',
+        transparent: 'true',
+        dpi: 96,
+        f: 'image'
+      };
+
+      const queryString = Object.keys(params)
+        .map(key => `${key}=${encodeURIComponent(params[key])}`)
+        .join('&');
+
+      const imageUrl = `${this._url}/export?${queryString}`;
+
+      // Remove existing overlay
+      if (this._imageOverlay) {
+        this._map.removeLayer(this._imageOverlay);
+      }
+
+      // Add new overlay
+      this._imageOverlay = L.imageOverlay(imageUrl, bounds, {
+        opacity: this.options.opacity || 0.7,
+        attribution: this.options.attribution || ''
+      });
+
+      this._imageOverlay.addTo(this._map);
+    }
+  });
+
+  return new DynamicLayer(url, options);
+}
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -24,6 +93,16 @@ const MapPage = () => {
   const [countyBoundary, setCountyBoundary] = useState(null)
   const [parcelData, setParcelData] = useState(null)
   const [error, setError] = useState(null)
+  
+  // Environmental layers state
+  const [showWetlands, setShowWetlands] = useState(false)
+  const [wetlandsLayer, setWetlandsLayer] = useState(null)
+  const [showFloodplain, setShowFloodplain] = useState(false)
+  const [floodplainLayer, setFloodplainLayer] = useState(null)
+  const [mapInstance, setMapInstance] = useState(null)
+  
+  // Map ref for accessing leaflet instance
+  const mapRef = useRef(null)
   
   // Sample parcel data - will be replaced by GeoJSON data
   const [parcels] = useState([
@@ -90,6 +169,79 @@ const MapPage = () => {
 
     loadMapData()
   }, [county])
+
+  // Map instance setup
+  const handleMapCreated = useCallback((map) => {
+    setMapInstance(map)
+    mapRef.current = map
+  }, [])
+
+  // Wetlands layer management
+  useEffect(() => {
+    if (!mapInstance) return
+
+    if (showWetlands) {
+      console.log('Adding wetlands layer')
+      const wetlands = createArcGISDynamicLayer(
+        'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer',
+        { opacity: 0.7 }
+      )
+      wetlands.addTo(mapInstance)
+      setWetlandsLayer(wetlands)
+    } else {
+      console.log('Removing wetlands layer')
+      if (wetlandsLayer) {
+        mapInstance.removeLayer(wetlandsLayer)
+        setWetlandsLayer(null)
+      }
+    }
+
+    return () => {
+      if (wetlandsLayer) {
+        mapInstance.removeLayer(wetlandsLayer)
+      }
+    }
+  }, [showWetlands, mapInstance, wetlandsLayer])
+
+  // Floodplain layer management using PMTiles
+  useEffect(() => {
+    if (!mapInstance) return
+
+    if (showFloodplain) {
+      console.log('Adding floodplain layer')
+      const loadFloodplainLayer = async () => {
+        try {
+          const { leafletRasterLayer } = await import('pmtiles')
+          const floodplain = leafletRasterLayer(
+            'https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles',
+            {
+              attribution: '© SWFWMD',
+              opacity: 0.6,
+              minZoom: 5,
+              maxZoom: 20,
+            }
+          )
+          floodplain.addTo(mapInstance)
+          setFloodplainLayer(floodplain)
+        } catch (error) {
+          console.error('Failed to load floodplain layer:', error)
+        }
+      }
+      loadFloodplainLayer()
+    } else {
+      console.log('Removing floodplain layer')
+      if (floodplainLayer) {
+        mapInstance.removeLayer(floodplainLayer)
+        setFloodplainLayer(null)
+      }
+    }
+
+    return () => {
+      if (floodplainLayer) {
+        mapInstance.removeLayer(floodplainLayer)
+      }
+    }
+  }, [showFloodplain, mapInstance, floodplainLayer])
 
   const toggleFavorite = (parcelId) => {
     const newFavorites = new Set(favorites)
@@ -217,6 +369,7 @@ const MapPage = () => {
             zoom={12}
             style={{ height: '100%', width: '100%' }}
             className="z-0"
+            whenCreated={handleMapCreated}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -319,6 +472,80 @@ const MapPage = () => {
             ))}
           </MapContainer>
 
+          {/* Legend */}
+          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-10 space-y-3">
+            <h3 className="font-semibold text-sm mb-3">Legend</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border border-yellow-600 rounded" style={{backgroundColor: '#ffeb3b'}}></div>
+                <span>Available Parcels</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
+                <span>Favorited Parcels</span>
+              </div>
+              
+              {/* Environmental Layers */}
+              <div className="pt-2 border-t border-gray-200">
+                <div className="space-y-2 text-xs mb-4">
+                  <h4 className="font-medium text-xs text-gray-700">Environmental Layers</h4>
+                  
+                  {/* Wetlands Toggle */}
+                  <div 
+                    className={`flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
+                      showWetlands ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      console.log('Wetlands checkbox clicked:', !showWetlands)
+                      setShowWetlands(!showWetlands)
+                    }}
+                  >
+                    <div 
+                      className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-all ${
+                        showWetlands 
+                          ? 'bg-blue-500 border-blue-500 text-white' 
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {showWetlands && (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <span>NWI Wetlands</span>
+                  </div>
+                  
+                  {/* Floodplain Toggle */}
+                  <div 
+                    className={`flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
+                      showFloodplain ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      console.log('Floodplain checkbox clicked:', !showFloodplain)
+                      setShowFloodplain(!showFloodplain)
+                    }}
+                  >
+                    <div 
+                      className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-all ${
+                        showFloodplain 
+                          ? 'bg-blue-500 border-blue-500 text-white' 
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {showFloodplain && (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <span>SWFWMD Floodplain</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Error message */}
           {error && (
             <div className="absolute top-4 left-4 right-4 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-2 rounded-lg z-10">
@@ -328,7 +555,7 @@ const MapPage = () => {
 
           {/* Selected Parcel Details Panel */}
           {selectedParcel && (
-            <div className="absolute bottom-4 left-4 right-4 md:right-auto md:w-80 glass rounded-lg p-4 z-10">
+            <div className="absolute bottom-20 left-4 right-4 md:right-auto md:w-80 glass rounded-lg p-4 z-10">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{selectedParcel.address}</h3>

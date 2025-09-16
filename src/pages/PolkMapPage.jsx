@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, GeoJSON, LayersControl } from 'react-leaflet'
 import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outline'
@@ -99,6 +99,8 @@ const PolkMapPage = () => {
   const [showWetlands, setShowWetlands] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
+  const [showFloodplain, setShowFloodplain] = useState(false)
+  const [floodplainLayer, setFloodplainLayer] = useState(null)
 
   // Color mapping for development areas (excluding RDA) - optimized for transparent overlays
   const developmentAreaColors = {
@@ -239,6 +241,118 @@ const PolkMapPage = () => {
     }
   }, [showWetlands, mapInstance])
 
+  // Effect to handle floodplain layer toggle
+  useEffect(() => {
+    if (!mapInstance) return
+
+    if (showFloodplain && !floodplainLayer) {
+      console.log('Adding floodplain layer to map...')
+      const loadFloodplain = async () => {
+        try {
+          console.log('Loading PMTiles floodplain data...')
+          const { PMTiles } = await import('pmtiles')
+          const pmtiles = new PMTiles('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles')
+          
+          const header = await pmtiles.getHeader()
+          const metadata = await pmtiles.getMetadata()
+          console.log('PMTiles Metadata:', metadata)
+          
+          // Try to use leafletRasterLayer if it exists
+          let layer
+          try {
+            const { leafletRasterLayer } = await import('pmtiles')
+            layer = leafletRasterLayer(pmtiles, {
+              attribution: '&copy; <a href="https://www.swfwmd.state.fl.us/">Southwest Florida Water Management District</a>',
+              opacity: 0.8,
+              maxZoom: 20,
+              minZoom: 5
+            })
+            
+            console.log('PMTiles floodplain layer created - supporting zoom levels 5-20')
+            console.log('PMTiles floodplain layer created successfully')
+            
+          } catch (rasterError) {
+            console.log('leafletRasterLayer not available:', rasterError.message, 'trying custom implementation...')
+            
+            // Custom tile layer implementation
+            const CustomPMTilesLayer = L.TileLayer.extend({
+              initialize: function(pmtilesInstance, options) {
+                this.pmtiles = pmtilesInstance
+                L.TileLayer.prototype.initialize.call(this, '', options)
+              },
+              
+              getTileUrl: function() {
+                return ''
+              },
+              
+              createTile: function(coords, done) {
+                const tile = document.createElement('div')
+                tile.style.width = '256px'
+                tile.style.height = '256px'
+                tile.style.backgroundColor = 'rgba(59, 130, 246, 0.3)'
+                tile.style.border = '1px solid #1e40af'
+                tile.style.display = 'flex'
+                tile.style.alignItems = 'center'
+                tile.style.justifyContent = 'center'
+                tile.style.fontSize = '10px'
+                tile.style.color = '#1e40af'
+                tile.innerHTML = 'Floodplain'
+                done(null, tile)
+                return tile
+              }
+            })
+            
+            layer = new CustomPMTilesLayer(pmtiles, {
+              attribution: '&copy; <a href="https://www.swfwmd.state.fl.us/">Southwest Florida Water Management District</a>',
+              opacity: 0.8,
+              maxZoom: 20,
+              minZoom: 5
+            })
+          }
+          
+          layer.addTo(mapInstance)
+          
+          // Set z-index to ensure proper layering
+          setTimeout(() => {
+            const leafletPane = mapInstance.getPane('tilePane')
+            if (leafletPane) {
+              const tileLayers = leafletPane.querySelectorAll('.leaflet-layer')
+              tileLayers.forEach(tileLayer => {
+                if (tileLayer.style.zIndex === '' || parseInt(tileLayer.style.zIndex) < 1000) {
+                  tileLayer.style.zIndex = '1000'
+                }
+              })
+              console.log('Set floodplain layer z-index to 1000')
+            }
+            
+            console.log('PMTiles floodplain layer added successfully')
+          }, 100)
+          
+          setFloodplainLayer(layer)
+          
+        } catch (error) {
+          console.error('Error loading floodplain layer:', error)
+        }
+      }
+      
+      loadFloodplain()
+      
+    } else if (!showFloodplain && floodplainLayer) {
+      console.log('Removing floodplain layer from map...')
+      if (mapInstance && floodplainLayer) {
+        mapInstance.removeLayer(floodplainLayer)
+        setFloodplainLayer(null)
+      }
+    }
+
+    return () => {
+      if (floodplainLayer && mapInstance) {
+        mapInstance.removeLayer(floodplainLayer)
+      }
+    }
+    // Note: floodplainLayer intentionally omitted from dependencies to prevent infinite loop
+  }, [showFloodplain, mapInstance])
+
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
       // Get parcel address for better storage
@@ -267,15 +381,12 @@ const PolkMapPage = () => {
   const favoriteIds = Array.from(favorites)
 
   // Handle map ready event
-  const handleMapReady = () => {
+  const handleMapReady = (map) => {
     console.log('Map is ready')
-    console.log('Initial map ready. Will fit to data bounds.')
     setMapReady(true)
     
-    // Store map instance for wetlands layer
-    if (mapRef.current) {
-      setMapInstance(mapRef.current)
-    }
+    // Store map instance for environmental layers
+    setMapInstance(map.target)
     
     // If parcel data is already loaded, zoom to it
     if (parcelData) {
@@ -549,7 +660,7 @@ const PolkMapPage = () => {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-10 space-y-3 max-h-96 overflow-y-auto">
+      <div className="absolute bottom-20 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 z-20 max-w-xs">
         <h3 className="font-semibold text-sm mb-3">Legend</h3>
         
         {/* Parcel Legend */}
@@ -615,25 +726,51 @@ const PolkMapPage = () => {
           )}
         </div>
 
-        {/* Wetlands Layer Toggle */}
+        {/* Environmental Layers Toggle */}
         <div className="pt-2 border-t border-gray-200">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="wetlands-toggle"
-              checked={showWetlands}
-              onChange={(e) => {
-                console.log('Wetlands toggle:', e.target.checked)
-                setShowWetlands(e.target.checked)
-              }}
-              className="w-3 h-3"
-            />
-            <div className="flex items-center space-x-1">
-              <span className="text-xs">NWI Wetlands</span>
+          <h4 className="font-medium text-xs mb-2 text-gray-700">Environmental Layers</h4>
+          <div className="space-y-2">
+            {/* Wetlands Toggle */}
+            <div 
+              onClick={() => setShowWetlands(!showWetlands)}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+            >
+              <div 
+                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
+                  showWetlands ? 'bg-blue-400 border-blue-600' : 'bg-white'
+                }`}
+              >
+                {showWetlands && <span className="text-white font-bold text-xs">✓</span>}
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-blue-400 border border-blue-600 rounded opacity-70"></div>
+                <span className="text-xs">NWI Wetlands</span>
+              </div>
             </div>
-          </div>
-          <div className="text-[10px] text-gray-500 mt-1">
-            National Wetlands Inventory
+            <div className="text-xs text-gray-500 pl-6">
+              National Wetlands Inventory
+            </div>
+            
+            {/* Floodplain Toggle */}
+            <div 
+              onClick={() => setShowFloodplain(!showFloodplain)}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+            >
+              <div 
+                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
+                  showFloodplain ? 'bg-blue-500 border-blue-600' : 'bg-white'
+                }`}
+              >
+                {showFloodplain && <span className="text-white font-bold text-xs">✓</span>}
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-blue-600 border border-blue-800 rounded opacity-80"></div>
+                <span className="text-xs">SWFWMD Floodplain</span>
+              </div>
+            </div>
+            <div className="text-xs text-gray-500 pl-6">
+              Southwest Florida Water Management District
+            </div>
           </div>
         </div>
 

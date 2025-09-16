@@ -88,6 +88,8 @@ const ManateeMapPage = () => {
   const [panelParcel, setPanelParcel] = useState(null)
   const [showWetlands, setShowWetlands] = useState(false)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
+  const [showFloodplain, setShowFloodplain] = useState(false)
+  const [floodplainLayer, setFloodplainLayer] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
 
   // Load Manatee parcel and boundary data when component mounts
@@ -180,6 +182,146 @@ const ManateeMapPage = () => {
       console.log('Wetlands layer removed successfully')
     }
   }, [showWetlands, mapInstance, wetlandsLayer])
+
+  // Effect to manage floodplain layer
+  useEffect(() => {
+    console.log('Floodplain useEffect triggered:', { showFloodplain, mapInstance: !!mapInstance, floodplainLayer: !!floodplainLayer })
+    if (!mapInstance) return
+
+    const loadFloodplainLayer = async () => {
+      if (showFloodplain && !floodplainLayer) {
+        console.log('Adding floodplain layer to map...')
+        
+        try {
+          // Import PMTiles dynamically
+          const { PMTiles } = await import('pmtiles')
+          
+          console.log('Loading PMTiles floodplain data...')
+          
+          // Create PMTiles instance
+          const pmtiles = new PMTiles('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles')
+          
+          // Get metadata to understand the tileset
+          const header = await pmtiles.getHeader()
+          const metadata = await pmtiles.getMetadata()
+          console.log('PMTiles Metadata:', metadata)
+          
+          // Check if PMTiles bounds overlap with current view
+          if (header.minLonE7 && header.maxLonE7 && header.minLatE7 && header.maxLatE7) {
+            const bounds = [
+              [header.minLatE7 / 10000000, header.minLonE7 / 10000000],
+              [header.maxLatE7 / 10000000, header.maxLonE7 / 10000000]
+            ]
+            
+            const mapBounds = mapInstance.getBounds()
+            const boundsOverlap = mapBounds.intersects(L.latLngBounds(bounds))
+            
+            if (!boundsOverlap) {
+              console.log('Zooming to floodplain data extent')
+              mapInstance.fitBounds(bounds)
+            }
+          }
+          
+          // Try to use leafletRasterLayer if it exists
+          let layer
+          try {
+            const { leafletRasterLayer } = await import('pmtiles')
+            layer = leafletRasterLayer(pmtiles, {
+              attribution: '&copy; <a href="https://www.swfwmd.state.fl.us/">Southwest Florida Water Management District</a>',
+              opacity: 0.8,
+              maxZoom: 20, // Updated for new PMTiles file with zoom 5-20
+              minZoom: 5
+            })
+            
+            console.log('PMTiles floodplain layer created - supporting zoom levels 5-20')
+            
+          } catch (rasterError) {
+            console.log('leafletRasterLayer not available:', rasterError.message, 'trying custom implementation...')
+            
+            // Custom tile layer implementation
+            const CustomPMTilesLayer = L.TileLayer.extend({
+              initialize: function(pmtilesInstance, options) {
+                this.pmtiles = pmtilesInstance
+                L.TileLayer.prototype.initialize.call(this, '', options)
+              },
+              
+              getTileUrl: function() {
+                // Return empty string as we'll handle tiles in createTile
+                return ''
+              },
+              
+              createTile: function(coords, done) {
+                const tile = document.createElement('div')
+                tile.style.width = '256px'
+                tile.style.height = '256px'
+                tile.style.backgroundColor = 'rgba(59, 130, 246, 0.3)'
+                tile.style.border = '1px solid #1e40af'
+                tile.innerHTML = `<div style="padding: 10px; font-size: 12px; color: #1e40af;">Floodplain Tile ${coords.z}/${coords.x}/${coords.y}</div>`
+                
+                // Try to get actual tile data
+                this.pmtiles.getZxy(coords.z, coords.x, coords.y).then(data => {
+                  if (data && data.byteLength > 0) {
+                    console.log(`Found tile data at ${coords.z}/${coords.x}/${coords.y}, size: ${data.byteLength} bytes`)
+                    tile.style.backgroundColor = 'rgba(59, 130, 246, 0.6)'
+                    tile.innerHTML = `<div style="padding: 10px; font-size: 12px; color: white; background: rgba(30, 64, 175, 0.8);">Floodplain Data</div>`
+                  }
+                  done(null, tile)
+                }).catch(err => {
+                  console.log(`No tile data at ${coords.z}/${coords.x}/${coords.y}:`, err.message)
+                  done(null, tile)
+                })
+                
+                return tile
+              }
+            })
+            
+            layer = new CustomPMTilesLayer(pmtiles, {
+              attribution: '&copy; <a href="https://www.swfwmd.state.fl.us/">Southwest Florida Water Management District</a>',
+              opacity: 0.8,
+              maxZoom: 20,
+              minZoom: 5
+            })
+          }
+          
+          layer.addTo(mapInstance)
+          
+          // Make sure floodplain layer appears on top
+          if (layer.setZIndex) {
+            layer.setZIndex(1000)
+            console.log('Set floodplain layer z-index to 1000')
+          }
+          
+          setFloodplainLayer(layer)
+          console.log('PMTiles floodplain layer added successfully')
+          
+        } catch (error) {
+          console.error('Error loading PMTiles floodplain data:', error)
+          
+          // Fallback: create a simple info marker with error details
+          const layer = L.layerGroup()
+          const marker = L.marker([27.5, -82.5]).bindPopup(`
+            <div>
+              <h4>Floodplain Layer Error</h4>
+              <p>Failed to load PMTiles data</p>
+              <p><small>Error: ${error.message || 'Unknown error'}</small></p>
+              <p><small>Check browser console for details</small></p>
+            </div>
+          `)
+          layer.addLayer(marker)
+          layer.addTo(mapInstance)
+          setFloodplainLayer(layer)
+        }
+        
+      } else if (!showFloodplain && floodplainLayer) {
+        console.log('Removing floodplain layer from map...')
+        mapInstance.removeLayer(floodplainLayer)
+        setFloodplainLayer(null)
+        console.log('Floodplain layer removed successfully')
+      }
+    }
+
+    loadFloodplainLayer()
+  }, [showFloodplain, mapInstance, floodplainLayer])
 
   const toggleFavorite = async (parcelId) => {
     try {
@@ -462,20 +604,49 @@ const ManateeMapPage = () => {
         <div className="border-t pt-3">
           <h4 className="font-medium text-xs mb-2 text-gray-700">Environmental Layers</h4>
           <div className="space-y-2">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showWetlands}
-                onChange={(e) => setShowWetlands(e.target.checked)}
-                className="w-3 h-3 text-primary-600 rounded focus:ring-primary-500"
-              />
+            {/* Wetlands Toggle */}
+            <div 
+              onClick={() => setShowWetlands(!showWetlands)}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+            >
+              <div 
+                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
+                  showWetlands ? 'bg-blue-400 border-blue-600' : 'bg-white'
+                }`}
+              >
+                {showWetlands && <span className="text-white font-bold text-xs">✓</span>}
+              </div>
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 bg-blue-400 border border-blue-600 rounded opacity-70"></div>
                 <span className="text-xs">NWI Wetlands</span>
               </div>
-            </label>
-            <div className="text-xs text-gray-500 pl-5">
+            </div>
+            <div className="text-xs text-gray-500 pl-6">
               National Wetlands Inventory
+            </div>
+            
+            {/* Floodplain Toggle */}
+            <div 
+              onClick={() => {
+                console.log('Floodplain checkbox clicked:', !showFloodplain)
+                setShowFloodplain(!showFloodplain)
+              }}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+            >
+              <div 
+                className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${
+                  showFloodplain ? 'bg-blue-500 border-blue-600' : 'bg-white'
+                }`}
+              >
+                {showFloodplain && <span className="text-white font-bold text-xs">✓</span>}
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-blue-600 border border-blue-800 rounded opacity-80"></div>
+                <span className="text-xs">SWFWMD Floodplain</span>
+              </div>
+            </div>
+            <div className="text-xs text-gray-500 pl-6">
+              Southwest Florida Water Management District
             </div>
           </div>
         </div>
