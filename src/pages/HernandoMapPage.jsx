@@ -128,10 +128,21 @@ const HernandoMapPage = () => {
     const loadFavorites = async () => {
       try {
         console.log('Loading Hernando favorites...')
+        
+        // Check if user is authenticated first
+        const { data: { user } } = await supabase.auth.getUser()
+        console.log('Current user:', user?.id, user?.email)
+        
+        if (!user) {
+          console.log('No authenticated user found')
+          return
+        }
+        
         const userFavorites = await favoritesService.getFavoritesByCounty('Hernando')
+        console.log('Raw favorites data:', userFavorites)
         const favoriteIds = new Set(userFavorites.map(fav => fav.parcel_id))
         setFavorites(favoriteIds)
-        console.log('Loaded favorites:', favoriteIds.size)
+        console.log('Loaded favorites:', favoriteIds.size, 'IDs:', Array.from(favoriteIds))
       } catch (err) {
         console.error('Error loading favorites:', err)
       }
@@ -201,9 +212,6 @@ const HernandoMapPage = () => {
     }
   }
 
-  // Convert favorites Set to array for easier checking
-  const favoriteIds = Array.from(favorites)
-
   // Function to zoom map to parcel bounds
   const zoomToParcelBounds = () => {
     if (parcelData && mapRef.current) {
@@ -233,7 +241,11 @@ const HernandoMapPage = () => {
   const parcelStyle = (feature) => {
     const parcelId = feature.properties.PARCEL_UID; // Use PARCEL_UID which matches the ParcelInfoPanel getParcelId()
     const isSelected = selectedParcel === parcelId;
-    const isFavorite = favoriteIds.includes(parcelId);
+    
+    // Handle type conversion: check both the original value and string/number conversions
+    const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
+    
+    console.log('Checking parcel:', parcelId, 'isFavorite:', isFavorite, 'favorites size:', favorites.size)
     
     if (isFavorite) {
       return {

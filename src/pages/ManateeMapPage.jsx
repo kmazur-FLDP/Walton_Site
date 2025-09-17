@@ -7,7 +7,6 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
-import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -352,9 +351,6 @@ const ManateeMapPage = () => {
     }
   }
 
-  // Convert favorites Set to array for easier checking
-  const favoriteIds = Array.from(favorites)
-
   // Function to zoom map to parcel bounds
   const zoomToParcelBounds = () => {
     if (parcelData && mapRef.current) {
@@ -396,7 +392,9 @@ const ManateeMapPage = () => {
   const parcelStyle = (feature) => {
     const parcelId = feature.properties.PARCEL_UID; // Use PARCEL_UID which matches the ParcelInfoPanel getParcelId()
     const isSelected = selectedParcel === parcelId;
-    const isFavorite = favoriteIds.includes(parcelId);
+    
+    // Handle type conversion: check both the original value and string/number conversions
+    const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
     
     if (isFavorite) {
       return {

@@ -5,6 +5,7 @@ import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outl
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
+import { supabase } from '../lib/supabase'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
 import FloodplainLayer from '../components/FloodplainLayer'
@@ -129,17 +130,83 @@ const PascoMapPage = () => {
     const loadFavorites = async () => {
       try {
         console.log('Loading Pasco favorites...')
+        
+        // Check if user is authenticated first
+        const { data: { user } } = await supabase.auth.getUser()
+        console.log('Current user:', user?.id, user?.email)
+        
+        if (!user) {
+          console.log('No authenticated user found')
+          return
+        }
+        
         const userFavorites = await favoritesService.getFavoritesByCounty('Pasco')
+        console.log('Raw Pasco favorites data:', userFavorites)
+        console.log('Individual favorite parcel_ids and types:', userFavorites.map(fav => ({ 
+          parcel_id: fav.parcel_id, 
+          type: typeof fav.parcel_id,
+          value: fav.parcel_id 
+        })))
         const favoriteIds = new Set(userFavorites.map(fav => fav.parcel_id))
         setFavorites(favoriteIds)
-        console.log('Loaded favorites:', favoriteIds.size)
+        console.log('Loaded Pasco favorites:', favoriteIds.size, 'IDs:', Array.from(favoriteIds))
       } catch (err) {
-        console.error('Error loading favorites:', err)
+        console.error('Error loading Pasco favorites:', err)
       }
     }
 
     loadFavorites()
   }, [])
+
+  // Debug function - accessible from browser console as window.debugPascoFavorites()
+  useEffect(() => {
+    window.debugPascoFavorites = async () => {
+      try {
+        console.log('=== DEBUGGING PASCO FAVORITES ===')
+        
+        // Check current user
+        const { data: { user } } = await supabase.auth.getUser()
+        console.log('Current user:', user?.id, user?.email)
+        
+        if (!user) {
+          console.log('No authenticated user')
+          return
+        }
+        
+        // Check all favorites for this user
+        const { data: allFavorites, error: allError } = await supabase
+          .from('favorite_parcels')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+        
+        if (allError) {
+          console.error('Error fetching all favorites:', allError)
+          return
+        }
+        
+        console.log('All user favorites:', allFavorites)
+        
+        // Check Pasco specifically
+        const pascoFavorites = allFavorites.filter(fav => fav.county === 'Pasco')
+        console.log('Pasco favorites:', pascoFavorites)
+        
+        // Check what's in the current state
+        console.log('Current favorites state:', {
+          size: favorites.size,
+          values: Array.from(favorites)
+        })
+        
+        return { allFavorites, pascoFavorites, currentState: Array.from(favorites) }
+      } catch (err) {
+        console.error('Debug error:', err)
+      }
+    }
+
+    return () => {
+      delete window.debugPascoFavorites
+    }
+  }, [favorites])
 
   // Function to zoom map to parcel bounds (moved above effect to avoid TDZ in dependency array)
   const zoomToParcelBounds = useCallback(() => {
@@ -332,9 +399,6 @@ const PascoMapPage = () => {
     }
   }, [parcelData, favorites])
 
-  // Convert favorites Set to array for easier checking
-  const favoriteIds = Array.from(favorites)
-
   // Handle map ready event
   const handleMapReady = (map) => {
     console.log('Map is ready')
@@ -351,7 +415,25 @@ const PascoMapPage = () => {
   const parcelStyle = (feature) => {
     const parcelId = feature.properties.PARCEL_UID; // Use the correct property name from GeoJSON
     const isSelected = selectedParcel === parcelId;
-    const isFavorite = favoriteIds.includes(parcelId);
+    
+    // Handle type conversion: check both the original value and string/number conversions
+    const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
+    
+    // Add debugging for a few parcels to understand what's happening
+    if (Math.random() < 0.001) { // Log 0.1% of parcels to avoid spam
+      console.log('Pasco parcel styling debug:', {
+        parcelId,
+        parcelIdType: typeof parcelId,
+        isSelected,
+        isFavorite,
+        favoritesSize: favorites.size,
+        favoritesList: Array.from(favorites).slice(0, 5), // Show first 5 favorites
+        favoritesTypes: Array.from(favorites).slice(0, 5).map(id => typeof id),
+        stringCheck: favorites.has(String(parcelId)),
+        numberCheck: favorites.has(Number(parcelId)),
+        directCheck: favorites.has(parcelId)
+      });
+    }
     
     if (isFavorite) {
       return {

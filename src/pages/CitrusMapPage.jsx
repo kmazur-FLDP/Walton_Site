@@ -305,9 +305,6 @@ const CitrusMapPage = () => {
     }
   }, [parcelData, favorites])
 
-  // Convert favorites Set to array for easier checking
-  const favoriteIds = Array.from(favorites)
-
   // (Removed legacy duplicated zoomToParcelBounds fragment)
 
   // Handle map ready event
@@ -327,7 +324,9 @@ const CitrusMapPage = () => {
   const parcelStyle = (feature) => {
     const parcelId = feature.properties.PARCEL_UID; // Use the correct property name from GeoJSON
     const isSelected = selectedParcel === parcelId;
-    const isFavorite = favoriteIds.includes(parcelId);
+    
+    // Handle type conversion: check both the original value and string/number conversions
+    const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
     
     if (isFavorite) {
       return {

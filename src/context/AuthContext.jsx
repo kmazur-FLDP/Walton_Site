@@ -66,25 +66,17 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
     })
 
-    // Sign out user when they close the browser or navigate away
+    // Sign out user when they close the browser
     const handleBeforeUnload = () => {
       supabase.auth.signOut()
     }
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        supabase.auth.signOut()
-      }
-    }
-
-    // Add event listeners for browser close/tab change
+    // Add event listener for browser close only
     window.addEventListener('beforeunload', handleBeforeUnload)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       subscription.unsubscribe()
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 

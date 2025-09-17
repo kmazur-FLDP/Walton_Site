@@ -381,9 +381,6 @@ const PolkMapPage = () => {
     }
   }, [parcelData, favorites])
 
-  // Convert favorites Set to array for easier checking
-  const favoriteIds = Array.from(favorites)
-
   // Handle map ready event
   const handleMapReady = (map) => {
     console.log('Map is ready')
@@ -402,8 +399,8 @@ const PolkMapPage = () => {
   const parcelStyle = (feature) => {
     const parcelId = feature.properties.PARCEL_UID; // Use PARCEL_UID to match ParcelInfoPanel getParcelId()
     const isSelected = selectedParcel === parcelId;
-    // Handle both string and number comparison for favorites
-    const isFavorite = favoriteIds.includes(parcelId) || favoriteIds.includes(String(parcelId)) || favoriteIds.includes(Number(parcelId));
+    // Use Set.has() for efficient lookup - handles both string and number comparison
+    const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
     
     // Debug logging for first few parcels to check styling
     if (Math.random() < 0.001) { // Log 0.1% of parcels to avoid spam
@@ -412,14 +409,14 @@ const PolkMapPage = () => {
         parcelIdType: typeof parcelId,
         isSelected,
         isFavorite,
-        favoriteIds: favoriteIds.slice(0, 5), // Show first 5 favorites
-        favoriteIdsTypes: favoriteIds.slice(0, 5).map(id => typeof id),
-        favoritesSize: favoriteIds.length
+        favoriteIds: Array.from(favorites).slice(0, 5), // Show first 5 favorites
+        favoriteIdsTypes: Array.from(favorites).slice(0, 5).map(id => typeof id),
+        favoritesSize: favorites.size
       });
     }
     
     if (isFavorite) {
-      console.log('🔵 BLUE PARCEL:', parcelId, typeof parcelId, 'matches favorite:', favoriteIds.find(id => id == parcelId)); // Log every blue parcel
+      console.log('🔵 BLUE PARCEL:', parcelId, typeof parcelId, 'matches favorite in set'); // Log every blue parcel
       return {
         fillColor: '#3b82f6', // Blue for favorites
         weight: 3,
