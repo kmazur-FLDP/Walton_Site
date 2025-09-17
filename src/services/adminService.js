@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import dataService from './dataService'
 
 class AdminService {
   /**
@@ -189,14 +190,13 @@ class AdminService {
       if (favError) throw favError
 
       // Get active users count (users with at least one favorite)
-      const { data: activeUsers, error: activeError } = await supabase
+      const { data: activeUsersData, error: activeError } = await supabase
         .from('favorite_parcels')
         .select('user_id')
-        .then(({ data, error }) => {
-          if (error) throw error
-          const uniqueUsers = new Set(data?.map(fav => fav.user_id) || [])
-          return { data: uniqueUsers.size, error: null }
-        })
+        
+      if (activeError) throw activeError
+      
+      const activeUsers = new Set(activeUsersData?.map(fav => fav.user_id) || []).size
 
       // Get favorites by county
       const { data: countyStats, error: countyError } = await supabase
@@ -513,6 +513,118 @@ class AdminService {
     } catch (error) {
       console.error('Error creating user:', error)
       return false
+    }
+  }
+
+  /**
+   * Get all favorites with enriched parcel data from GeoJSON files
+   * @returns {Promise<Array>} Array of favorites with detailed parcel information
+   */
+  async getAllFavoritesEnriched() {
+    try {
+      console.log('AdminService: Getting enriched favorites...')
+      const isAdminUser = await this.isAdmin()
+      if (!isAdminUser) throw new Error('Access denied: Admin role required')
+
+      // Get basic favorites data
+      const favorites = await this.getAllFavorites()
+      
+      // Load all county parcel data
+      const [hernandoParcels, manateeParcels, citrusParcels, pascoParcels, polkParcels] = await Promise.all([
+        dataService.loadHernandoParcels(),
+        dataService.loadManateeParcels(),
+        dataService.loadCitrusParcels(),
+        dataService.loadPascoParcels(),
+        dataService.loadPolkParcels()
+      ])
+
+      const countyData = {
+        'Hernando': hernandoParcels,
+        'Manatee': manateeParcels,
+        'Citrus': citrusParcels,
+        'Pasco': pascoParcels,
+        'Polk': polkParcels
+      }
+
+      // Enrich favorites with parcel details
+      const enrichedFavorites = favorites.map(favorite => {
+        const countyParcels = countyData[favorite.county]
+        let parcelDetails = null
+
+        if (countyParcels?.features) {
+          // Look for the parcel in the GeoJSON data
+          const parcelFeature = countyParcels.features.find(feature => {
+            const props = feature.properties
+            
+            // Try different property names that might match the parcel_id
+            const possibleIds = [
+              props.PARCEL_UID,
+              props.PARCEL_ID,
+              props.OBJECTID,
+              props.FID,
+              props.ID,
+              props.PIN,
+              props.APN
+            ]
+            
+            return possibleIds.some(id => 
+              id && id.toString() === favorite.parcel_id?.toString()
+            )
+          })
+
+          if (parcelFeature) {
+            const props = parcelFeature.properties
+            parcelDetails = {
+              // Address information
+              address: props.BAS_STRT || props.ADDRESS || props.SITUS_ADDR || favorite.parcel_address,
+              city: props.CITY || props.SITUS_CITY,
+              zip: props.ZIP || props.SITUS_ZIP,
+              
+              // Owner information
+              owner: props.OWNER || props.OWNER_NAME || props.OWN_NAME,
+              ownerAddress: props.OWN_ADDR1 || props.OWNER_ADDR,
+              ownerCity: props.OWN_CITY || props.OWNER_CITY,
+              ownerState: props.OWN_STATE || props.OWNER_STATE,
+              ownerZip: props.OWN_ZIP || props.OWNER_ZIP,
+              
+              // Property details
+              acreage: props.ACREAGE || props.ACRES || props.AREA_ACRES,
+              totalValue: props.TOTAL_VAL || props.JUST_VAL || props.ASSESSED_VAL,
+              landValue: props.LAND_VAL || props.LAND_VALUE,
+              improvValue: props.IMPROV_VAL || props.IMP_VALUE,
+              
+              // Legal description
+              legalDesc: props.LEGAL_DESC || props.LEGAL,
+              subdivision: props.SUBDIV || props.SUBDIVISION,
+              block: props.BLOCK,
+              lot: props.LOT,
+              
+              // Zoning and use
+              zoning: props.ZONING || props.ZONE,
+              landUse: props.LAND_USE || props.USE_CODE || props.DOR_UC,
+              useDesc: props.USE_DESC || props.DOR_UC_DESC,
+              
+              // Assessment year
+              assessYear: props.ASSESS_YR || props.YEAR,
+              
+              // Geographic data
+              geometry: parcelFeature.geometry
+            }
+          }
+        }
+
+        return {
+          ...favorite,
+          parcelDetails: parcelDetails
+        }
+      })
+
+      console.log('AdminService: Enriched favorites:', enrichedFavorites.length)
+      return enrichedFavorites
+    } catch (error) {
+      console.error('Error getting enriched favorites:', error)
+      // Fallback to basic favorites if enrichment fails
+      return await this.getAllFavorites()
     }
   }
 }
