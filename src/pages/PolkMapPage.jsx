@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
+import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -101,7 +102,6 @@ const PolkMapPage = () => {
   const [mapInstance, setMapInstance] = useState(null)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
-  const [floodplainLayer, setFloodplainLayer] = useState(null)
 
   // Color mapping for development areas (excluding RDA) - optimized for transparent overlays
   const developmentAreaColors = {
@@ -243,7 +243,8 @@ const PolkMapPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showWetlands, mapInstance]) // wetlandsLayer intentionally omitted to prevent infinite loop
 
-  // Effect to handle floodplain layer toggle
+  // Effect to handle floodplain layer toggle - REPLACED WITH FloodplainLayer COMPONENT
+  /*
   useEffect(() => {
     if (!mapInstance) return
 
@@ -354,6 +355,7 @@ const PolkMapPage = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showFloodplain, mapInstance]) // floodplainLayer intentionally omitted to prevent infinite loop
+  */
 
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
@@ -644,6 +646,14 @@ const PolkMapPage = () => {
               />
             </LayersControl.Overlay>
           </LayersControl>
+
+          {/* SWFWMD Floodplain Layer using ESRI FeatureServer */}
+          <FloodplainLayer
+            visible={showFloodplain}
+            name="SWFWMD Floodplain"
+            url="https://services5.arcgis.com/mCjnd0SqezpuhWXd/arcgis/rest/services/SWFWMD_Floodplain/FeatureServer/0"
+            type="vector"
+          />
 
           {/* Development Areas controlled by legend toggle */}
           {showDevelopmentAreas && developmentData && (

@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
+import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -89,7 +90,6 @@ const HernandoMapPage = () => {
   const [showWetlands, setShowWetlands] = useState(false)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
-  const [floodplainLayer, setFloodplainLayer] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
 
   // Load Hernando parcel data when component mounts
@@ -175,160 +175,6 @@ const HernandoMapPage = () => {
       console.log('Wetlands layer removed successfully')
     }
   }, [showWetlands, mapInstance, wetlandsLayer])
-
-  // Effect to handle floodplain layer toggle
-  useEffect(() => {
-    if (!mapInstance) return
-
-    const loadFloodplainLayer = async () => {
-      if (showFloodplain && !floodplainLayer) {
-        console.log('Adding floodplain layer to map...')
-        
-        try {
-          // Import PMTiles dynamically
-          const { PMTiles } = await import('pmtiles')
-          
-          console.log('Loading PMTiles floodplain data...')
-          
-          // Create PMTiles instance
-          const pmtiles = new PMTiles('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/tiles/floodplain.pmtiles')
-          
-          // Get metadata to understand the tileset
-          const header = await pmtiles.getHeader()
-          const metadata = await pmtiles.getMetadata()
-          console.log('PMTiles Metadata:', metadata)
-          
-          // Check if PMTiles bounds overlap with current view
-          if (header.minLonE7 && header.maxLonE7 && header.minLatE7 && header.maxLatE7) {
-            const bounds = [
-              [header.minLatE7 / 10000000, header.minLonE7 / 10000000],
-              [header.maxLatE7 / 10000000, header.maxLonE7 / 10000000]
-            ]
-            
-            const mapBounds = mapInstance.getBounds()
-            const boundsOverlap = mapBounds.intersects(L.latLngBounds(bounds))
-            
-            if (!boundsOverlap) {
-              console.log('Zooming to floodplain data extent')
-              mapInstance.fitBounds(bounds)
-            }
-          }
-          
-          // Try to use leafletRasterLayer if it exists
-          let layer
-          try {
-            const { leafletRasterLayer } = await import('pmtiles')
-            layer = leafletRasterLayer(pmtiles, {
-              attribution: '&copy; <a href="https://www.swfwmd.state.fl.us/">Southwest Florida Water Management District</a>',
-              opacity: 0.8,
-              maxZoom: 20, // Updated for new PMTiles file with zoom 5-20
-              minZoom: 5
-            })
-            
-            console.log('PMTiles floodplain layer created - supporting zoom levels 5-20')
-            
-            console.log('PMTiles floodplain layer created successfully')
-            
-          } catch (rasterError) {
-            console.log('leafletRasterLayer not available:', rasterError.message, 'trying custom implementation...')
-            
-            // Custom tile layer implementation
-            const CustomPMTilesLayer = L.TileLayer.extend({
-              initialize: function(pmtilesInstance, options) {
-                this.pmtiles = pmtilesInstance
-                L.TileLayer.prototype.initialize.call(this, '', options)
-              },
-              
-              getTileUrl: function() {
-                // Return empty string as we'll handle tiles in createTile
-                return ''
-              },
-              
-              createTile: function(coords, done) {
-                const tile = document.createElement('div')
-                tile.style.width = '256px'
-                tile.style.height = '256px'
-                tile.style.backgroundColor = 'rgba(59, 130, 246, 0.3)'
-                tile.style.border = '1px solid #1e40af'
-                tile.innerHTML = `<div style="padding: 10px; font-size: 12px; color: #1e40af;">Floodplain Tile ${coords.z}/${coords.x}/${coords.y}</div>`
-                
-                // Try to get actual tile data
-                this.pmtiles.getZxy(coords.z, coords.x, coords.y).then(data => {
-                  if (data && data.byteLength > 0) {
-                    console.log(`Found tile data at ${coords.z}/${coords.x}/${coords.y}, size: ${data.byteLength} bytes`)
-                    tile.style.backgroundColor = 'rgba(59, 130, 246, 0.6)'
-                    tile.innerHTML = `<div style="padding: 10px; font-size: 12px; color: white; background: rgba(30, 64, 175, 0.8);">Floodplain Data</div>`
-                  }
-                  done(null, tile)
-                }).catch(err => {
-                  console.log(`No tile data at ${coords.z}/${coords.x}/${coords.y}:`, err.message)
-                  done(null, tile)
-                })
-                
-                return tile
-              }
-            })
-            
-            layer = new CustomPMTilesLayer(pmtiles, {
-              attribution: '&copy; <a href="https://www.swfwmd.state.fl.us/">Southwest Florida Water Management District</a>',
-              opacity: 0.8
-            })
-          }
-          
-          layer.addTo(mapInstance)
-          
-          // Make sure floodplain layer appears on top
-          if (layer.setZIndex) {
-            layer.setZIndex(1000)
-            console.log('Set floodplain layer z-index to 1000')
-          }
-          
-          setFloodplainLayer(layer)
-          console.log('PMTiles floodplain layer added successfully')
-          
-        } catch (error) {
-          console.error('Error loading PMTiles floodplain data:', error)
-          
-          // More detailed error logging
-          if (error.message) {
-            console.error('Error message:', error.message)
-          }
-          if (error.stack) {
-            console.error('Error stack:', error.stack)
-          }
-          
-          // Fallback: create a simple info marker with error details
-          const layer = L.layerGroup()
-          const marker = L.marker([28.55, -82.45]).bindPopup(`
-            <div>
-              <h4>Floodplain Layer Error</h4>
-              <p>Failed to load PMTiles data</p>
-              <p><small>Error: ${error.message || 'Unknown error'}</small></p>
-              <p><small>Check browser console for details</small></p>
-            </div>
-          `)
-          layer.addLayer(marker)
-          layer.addTo(mapInstance)
-          setFloodplainLayer(layer)
-        }
-        
-      } else if (!showFloodplain && floodplainLayer) {
-        console.log('Removing floodplain layer from map...')
-        mapInstance.removeLayer(floodplainLayer)
-        
-        // Clean up zoom handler
-        if (mapInstance._floodplainZoomHandler) {
-          mapInstance.off('zoomend', mapInstance._floodplainZoomHandler)
-          delete mapInstance._floodplainZoomHandler
-        }
-        
-        setFloodplainLayer(null)
-        console.log('Floodplain layer removed successfully')
-      }
-    }
-    
-    loadFloodplainLayer()
-  }, [showFloodplain, mapInstance, floodplainLayer])
 
   const toggleFavorite = async (parcelId) => {
     try {
@@ -535,6 +381,14 @@ const HernandoMapPage = () => {
           />
 
           {/* NWI Wetlands Layer is now handled dynamically via useEffect */}
+
+          {/* SWFWMD Floodplain Layer using ESRI FeatureServer */}
+          <FloodplainLayer
+            visible={showFloodplain}
+            name="SWFWMD Floodplain"
+            url="https://services5.arcgis.com/mCjnd0SqezpuhWXd/arcgis/rest/services/SWFWMD_Floodplain/FeatureServer/0"
+            type="vector"
+          />
 
           {/* 
           ESRI SOLUTIONS - Professional mapping with consistent styling:

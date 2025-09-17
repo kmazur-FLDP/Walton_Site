@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
+import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -90,7 +91,6 @@ const PascoMapPage = () => {
   const [showWetlands, setShowWetlands] = useState(false)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
-  const [floodplainLayer, setFloodplainLayer] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
 
   // Load Pasco parcel data when component mounts
@@ -200,7 +200,8 @@ const PascoMapPage = () => {
     }
   }, [showWetlands, mapInstance, wetlandsLayer])
 
-  // Effect to handle floodplain layer toggle
+  // Effect to handle floodplain layer toggle - DISABLED: Now using FloodplainLayer component
+  /*
   useEffect(() => {
     if (!mapInstance) return
 
@@ -305,6 +306,7 @@ const PascoMapPage = () => {
       }
     }
   }, [showFloodplain, mapInstance, floodplainLayer])
+  */
 
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
@@ -510,6 +512,14 @@ const PascoMapPage = () => {
           </LayersControl>
 
           {/* NWI Wetlands Layer is now handled dynamically via useEffect */}
+
+          {/* SWFWMD Floodplain Layer using ESRI FeatureServer */}
+          <FloodplainLayer
+            visible={showFloodplain}
+            name="SWFWMD Floodplain"
+            url="https://services5.arcgis.com/mCjnd0SqezpuhWXd/arcgis/rest/services/SWFWMD_Floodplain/FeatureServer/0"
+            type="vector"
+          />
 
           {/* Parcel data layer */}
           {parcelData && (

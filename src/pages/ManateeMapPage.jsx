@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
+import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -90,7 +91,6 @@ const ManateeMapPage = () => {
   const [showWetlands, setShowWetlands] = useState(false)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
-  const [floodplainLayer, setFloodplainLayer] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
 
   // Load Manatee parcel and boundary data when component mounts
@@ -185,7 +185,8 @@ const ManateeMapPage = () => {
     }
   }, [showWetlands, mapInstance, wetlandsLayer])
 
-  // Effect to manage floodplain layer
+  // Effect to manage floodplain layer - DISABLED: Now using FloodplainLayer component
+  /*
   useEffect(() => {
     console.log('Floodplain useEffect triggered:', { showFloodplain, mapInstance: !!mapInstance, floodplainLayer: !!floodplainLayer })
     if (!mapInstance) return
@@ -324,6 +325,7 @@ const ManateeMapPage = () => {
 
     loadFloodplainLayer()
   }, [showFloodplain, mapInstance, floodplainLayer])
+  */
 
   const toggleFavorite = async (parcelId) => {
     try {
@@ -560,6 +562,14 @@ const ManateeMapPage = () => {
               }}
             />
           )}
+
+          {/* SWFWMD Floodplain Layer using ESRI FeatureServer */}
+          <FloodplainLayer
+            visible={showFloodplain}
+            name="SWFWMD Floodplain"
+            url="https://services5.arcgis.com/mCjnd0SqezpuhWXd/arcgis/rest/services/SWFWMD_Floodplain/FeatureServer/0"
+            type="vector"
+          />
 
           {/* Parcel data layer */}
           {parcelData && (

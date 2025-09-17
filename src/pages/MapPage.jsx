@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet'
 import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import dataService from '../services/dataService'
+import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -97,7 +98,6 @@ const MapPage = () => {
   const [showWetlands, setShowWetlands] = useState(false)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
-  const [floodplainLayer, setFloodplainLayer] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
   
   // Map ref for accessing leaflet instance
@@ -202,7 +202,8 @@ const MapPage = () => {
     }
   }, [showWetlands, mapInstance, wetlandsLayer])
 
-  // Floodplain layer management using PMTiles
+  // Floodplain layer management using PMTiles - REPLACED WITH FloodplainLayer COMPONENT
+  /*
   useEffect(() => {
     if (!mapInstance) return
 
@@ -241,6 +242,7 @@ const MapPage = () => {
       }
     }
   }, [showFloodplain, mapInstance, floodplainLayer])
+  */
 
   const toggleFavorite = (parcelId) => {
     const newFavorites = new Set(favorites)
@@ -375,6 +377,14 @@ const MapPage = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             
+            {/* SWFWMD Floodplain Layer using ESRI FeatureServer */}
+            <FloodplainLayer
+              visible={showFloodplain}
+              name="SWFWMD Floodplain"
+              url="https://services5.arcgis.com/mCjnd0SqezpuhWXd/arcgis/rest/services/SWFWMD_Floodplain/FeatureServer/0"
+              type="vector"
+            />
+
             {/* County Boundary Layer */}
             {countyBoundary && (
               <GeoJSON

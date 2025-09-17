@@ -8,6 +8,7 @@ import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import { MapSkeleton } from '../components/SkeletonLoader'
 import MapLegend from '../components/MapLegend'
+import FloodplainLayer from '../components/FloodplainLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -92,7 +93,6 @@ const CitrusMapPage = () => {
   const [mapInstance, setMapInstance] = useState(null)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
-  const [floodplainLayer, setFloodplainLayer] = useState(null)
 
   // Load Citrus parcel data when component mounts
   useEffect(() => {
@@ -181,7 +181,8 @@ const CitrusMapPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showWetlands, mapInstance]) // wetlandsLayer intentionally omitted to prevent infinite loop
 
-  // Floodplain layer management using PMTiles
+  // Floodplain layer management using PMTiles - REPLACED WITH FloodplainLayer COMPONENT
+  /*
   useEffect(() => {
     if (!mapInstance) return
 
@@ -279,6 +280,7 @@ const CitrusMapPage = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showFloodplain, mapInstance]) // floodplainLayer intentionally omitted to prevent infinite loop
+  */
 
   const toggleFavorite = useCallback(async (parcelId) => {
     try {
@@ -474,6 +476,14 @@ const CitrusMapPage = () => {
               />
             </LayersControl.Overlay>
           </LayersControl>
+
+          {/* SWFWMD Floodplain Layer using ESRI FeatureServer */}
+          <FloodplainLayer
+            visible={showFloodplain}
+            name="SWFWMD Floodplain"
+            url="https://services5.arcgis.com/mCjnd0SqezpuhWXd/arcgis/rest/services/SWFWMD_Floodplain/FeatureServer/0"
+            type="vector"
+          />
 
           {/* Parcel data layer */}
           {parcelData && (

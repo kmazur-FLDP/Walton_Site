@@ -1,20 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
-import { PMTiles } from 'pmtiles'
-import { leafletLayer } from 'protomaps-leaflet'
 import L from 'leaflet'
+import * as esriLeaflet from 'esri-leaflet'
 
-const FloodplainLayer = ({ visible, name = 'Floodplain', url }) => {
+const FloodplainLayer = ({ visible, name = 'Floodplain', url, type = 'vector' }) => {
   const map = useMap()
   const layerRef = useRef(null)
-  const pmtilesRef = useRef(null)
 
   useEffect(() => {
     if (!map || !url) return
 
     const setupLayer = async () => {
       try {
-        console.log(`Setting up ${name} layer, visible: ${visible}, url: ${url}`)
+        console.log(`Setting up ${name} layer, visible: ${visible}, url: ${url}, type: ${type}`)
         
         // Remove existing layer if it exists
         if (layerRef.current) {
@@ -28,28 +26,66 @@ const FloodplainLayer = ({ visible, name = 'Floodplain', url }) => {
           return
         }
 
-        console.log(`Creating PMTiles instance for ${name}`)
-        // Create PMTiles instance
-        pmtilesRef.current = new PMTiles(url)
-        
-        console.log(`Creating protomaps layer for ${name}`)
-        // Create protomaps layer from PMTiles
-        const layer = leafletLayer({
-          url: pmtilesRef.current,
-          attribution: 'Floodplain data from SWFWMD',
-          paint_rules: [
-            {
-              dataLayer: 'default',
-              symbolizer: {
-                type: 'Fill',
-                fill: '#3b82f6',
-                opacity: 0.6,
-                stroke: '#3b82f6',
-                width: 1
+        let layer
+
+        if (type === 'vector') {
+          // Use FeatureServer instead of VectorTileServer (same as working site)
+          console.log(`Creating ESRI FeatureLayer for ${name}`)
+          
+          // Convert VectorTileServer URL to FeatureServer URL
+          const featureServerUrl = url.replace('/VectorTileServer', '/FeatureServer/0')
+          console.log(`FeatureServer URL: ${featureServerUrl}`)
+          
+          layer = esriLeaflet.featureLayer({
+            url: featureServerUrl,
+            attribution: 'SWFWMD Floodplain Data',
+            style: function () {
+              return { 
+                color: '#3b82f6', 
+                weight: 2, 
+                opacity: 0.8,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.3
               }
             }
-          ]
-        })
+          })
+          
+          console.log(`${name} FeatureLayer created successfully`)
+          
+        } else {
+          // Fallback for PMTiles or other formats
+          console.log(`Creating PMTiles layer for ${name}`)
+          
+          try {
+            // Dynamic import for PMTiles
+            const { PMTiles } = await import('pmtiles')
+            const { leafletLayer } = await import('protomaps-leaflet')
+            
+            // Create PMTiles instance
+            const pmtiles = new PMTiles(url)
+            
+            // Create protomaps layer from PMTiles
+            layer = leafletLayer({
+              url: pmtiles,
+              attribution: 'Floodplain data from SWFWMD',
+              paint_rules: [
+                {
+                  dataLayer: 'default',
+                  symbolizer: {
+                    type: 'Fill',
+                    fill: '#3b82f6',
+                    opacity: 0.6,
+                    stroke: '#3b82f6',
+                    width: 1
+                  }
+                }
+              ]
+            })
+          } catch (error) {
+            console.error('Error loading PMTiles dependencies:', error)
+            throw error
+          }
+        }
 
         console.log(`Adding ${name} layer to map`)
         // Store reference and add to map
@@ -70,11 +106,8 @@ const FloodplainLayer = ({ visible, name = 'Floodplain', url }) => {
         map.removeLayer(layerRef.current)
         layerRef.current = null
       }
-      if (pmtilesRef.current) {
-        pmtilesRef.current = null
-      }
     }
-  }, [map, visible, url, name])
+  }, [map, visible, url, name, type])
 
   return null // This component doesn't render anything itself
 }
