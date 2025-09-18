@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
+import PrintButton from '../components/PrintButton'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -540,6 +541,16 @@ const ManateeMapPage = () => {
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <StarSolid className="h-5 w-5 text-amber-500" />
                 <span>{favorites.size} favorited</span>
+              </div>
+              
+              {/* Print Map Button */}
+              <div className="no-print">
+                <PrintButton 
+                  contentSelector=".leaflet-container"
+                  filename="manatee-county-map"
+                >
+                  Print Map
+                </PrintButton>
               </div>
               
               {selectedParcel && (

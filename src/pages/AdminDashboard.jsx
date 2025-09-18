@@ -28,6 +28,7 @@ import termsService from '../services/termsService'
 import { CardSkeleton, TableSkeleton } from '../components/SkeletonLoader'
 import { AdminOnlyState, DataErrorState } from '../components/EmptyState'
 import AccessLogs from '../components/AccessLogs'
+import PrintButton from '../components/PrintButton'
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
@@ -566,6 +567,16 @@ const AdminDashboard = () => {
               <span className="bg-red-100 text-red-800 text-sm font-medium px-2.5 py-0.5 rounded">
                 Admin Only
               </span>
+            </div>
+            
+            {/* Print Button */}
+            <div className="no-print">
+              <PrintButton 
+                className="text-sm"
+                showWarning={true}
+              >
+                Print Report
+              </PrintButton>
             </div>
           </div>
         </div>

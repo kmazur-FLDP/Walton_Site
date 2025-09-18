@@ -9,6 +9,7 @@ import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import { MapSkeleton } from '../components/SkeletonLoader'
 import MapLegend from '../components/MapLegend'
 import FloodplainLayer from '../components/FloodplainLayer'
+import PrintButton from '../components/PrintButton'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -463,6 +464,16 @@ const CitrusMapPage = () => {
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <StarSolid className="h-5 w-5 text-amber-500" />
                 <span>{favorites.size} favorited</span>
+              </div>
+              
+              {/* Print Map Button */}
+              <div className="no-print">
+                <PrintButton 
+                  className="text-sm"
+                  contentSelector=".map-container"
+                >
+                  Print Map
+                </PrintButton>
               </div>
               
               {selectedParcel && (

@@ -17,6 +17,7 @@ import Navbar from './components/Navbar'
 import LoadingSpinner from './components/LoadingSpinner'
 import SessionWarning from './components/SessionWarning'
 import ConfidentialityFooter from './components/ConfidentialityFooter'
+import PrintWatermark from './components/PrintWatermark'
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -162,6 +163,9 @@ const AppContent = () => {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      
+      {/* Print Watermark - applies to all printed content */}
+      <PrintWatermark />
       
       {/* Confidentiality Footer - appears on all pages */}
       <ConfidentialityFooter />
