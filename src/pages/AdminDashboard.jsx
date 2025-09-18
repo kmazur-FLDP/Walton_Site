@@ -45,6 +45,11 @@ const AdminDashboard = () => {
   const [selectedUsers, setSelectedUsers] = useState([])
   const [showUserModal, setShowUserModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editUserForm, setEditUserForm] = useState({
+    full_name: '',
+    role: 'user'
+  })
   const [bulkAction, setBulkAction] = useState('')
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
   const [createUserForm, setCreateUserForm] = useState({
@@ -132,6 +137,13 @@ const AdminDashboard = () => {
 
     loadAdminData()
   }, [navigate])
+
+  // Redirect from analytics tab if user somehow gets there
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      setActiveTab('overview')
+    }
+  }, [activeTab])
 
   const handleDeleteFavorite = async (favoriteId) => {
     if (!confirm('Are you sure you want to delete this favorite?')) return
@@ -222,7 +234,59 @@ const AdminDashboard = () => {
 
   const openUserModal = (user) => {
     setSelectedUser(user)
+    setIsEditMode(false)
     setShowUserModal(true)
+  }
+
+  const openEditUserModal = (user) => {
+    setSelectedUser(user)
+    setEditUserForm({
+      full_name: user.full_name || '',
+      role: user.role
+    })
+    setIsEditMode(true)
+    setShowUserModal(true)
+  }
+
+  const handleSaveUser = async () => {
+    try {
+      setCreateUserLoading(true) // Reuse loading state for now
+      
+      const success = await adminService.updateUserProfile(selectedUser.id, {
+        full_name: editUserForm.full_name,
+        role: editUserForm.role
+      })
+
+      if (success) {
+        // Update the user in the local state
+        setAllUsers(prev => prev.map(user => 
+          user.id === selectedUser.id 
+            ? { ...user, full_name: editUserForm.full_name, role: editUserForm.role }
+            : user
+        ))
+        
+        // Update selected user for the modal
+        setSelectedUser(prev => ({
+          ...prev,
+          full_name: editUserForm.full_name,
+          role: editUserForm.role
+        }))
+        
+        // Close edit mode
+        setIsEditMode(false)
+        setEditUserForm({ full_name: '', role: 'user' })
+        
+        // Show success message (you might want to add a toast here)
+        console.log('User updated successfully')
+      } else {
+        console.error('Failed to update user')
+        // Here you might want to show an error message
+      }
+    } catch (error) {
+      console.error('Error updating user:', error)
+    } finally {
+      setCreateUserLoading(false)
+    }
   }
 
   const getUserFavoritesCount = (userId) => {
@@ -273,6 +337,37 @@ const AdminDashboard = () => {
       ...prev,
       [field]: value
     }))
+  }
+
+  // Handle deleting terms acceptance
+  const handleDeleteTermsAcceptance = async (userId, userEmail) => {
+    if (!window.confirm(`Are you sure you want to delete terms acceptance for ${userEmail}? This user will need to accept the terms again before accessing the portal.`)) {
+      return
+    }
+
+    try {
+      const result = await termsService.deleteTermsAcceptance(userId)
+      
+      if (result.success) {
+        // Remove from local state
+        setTermsAcceptances(prev => prev.filter(acceptance => acceptance.user_id !== userId))
+        
+        // Update stats
+        setTermsStats(prev => ({
+          ...prev,
+          totalAccepted: prev.totalAccepted - 1,
+          pendingAcceptance: prev.pendingAcceptance + 1,
+          acceptanceRate: ((prev.totalAccepted - 1) / (prev.totalAccepted + prev.pendingAcceptance)) * 100
+        }))
+        
+        alert(`Terms acceptance deleted for ${userEmail}. They will need to accept terms again.`)
+      } else {
+        alert(`Failed to delete terms acceptance: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting terms acceptance:', error)
+      alert('Failed to delete terms acceptance. Please try again.')
+    }
   }
 
   // Favorites filtering and sorting functions
@@ -417,111 +512,6 @@ const AdminDashboard = () => {
     window.URL.revokeObjectURL(url)
   }
 
-  // Analytics calculation functions
-  const getAnalyticsData = () => {
-    const favorites = allFavorites
-    
-    // Most popular parcels (parcels favorited by multiple users)
-    const parcelCounts = {}
-    favorites.forEach(fav => {
-      const key = `${fav.county}-${fav.parcel_id}`
-      parcelCounts[key] = (parcelCounts[key] || 0) + 1
-    })
-    
-    const popularParcels = Object.entries(parcelCounts)
-      .filter(([, count]) => count > 1)
-      .sort(([, countA], [, countB]) => countB - countA)
-      .slice(0, 10)
-      .map(([key, count]) => {
-        const [county, parcelId] = key.split('-')
-        const sample = favorites.find(fav => fav.county === county && fav.parcel_id === parcelId)
-        return {
-          county,
-          parcelId,
-          count,
-          sample
-        }
-      })
-
-    // Activity trends (favorites per day over last 30 days)
-    const now = new Date()
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    const dailyActivity = {}
-    
-    for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toISOString().split('T')[0]
-      dailyActivity[dateKey] = 0
-    }
-    
-    favorites.forEach(fav => {
-      const dateKey = new Date(fav.created_at).toISOString().split('T')[0]
-      if (dateKey in dailyActivity) {
-        dailyActivity[dateKey]++
-      }
-    })
-
-    // User engagement patterns
-    const userActivity = {}
-    favorites.forEach(fav => {
-      if (!userActivity[fav.user_id]) {
-        userActivity[fav.user_id] = {
-          user: fav.profiles,
-          count: 0,
-          counties: new Set(),
-          firstActivity: new Date(fav.created_at),
-          lastActivity: new Date(fav.created_at)
-        }
-      }
-      userActivity[fav.user_id].count++
-      userActivity[fav.user_id].counties.add(fav.county)
-      const activityDate = new Date(fav.created_at)
-      if (activityDate < userActivity[fav.user_id].firstActivity) {
-        userActivity[fav.user_id].firstActivity = activityDate
-      }
-      if (activityDate > userActivity[fav.user_id].lastActivity) {
-        userActivity[fav.user_id].lastActivity = activityDate
-      }
-    })
-
-    const engagementLevels = {
-      light: Object.values(userActivity).filter(u => u.count <= 2).length,
-      moderate: Object.values(userActivity).filter(u => u.count >= 3 && u.count <= 10).length,
-      heavy: Object.values(userActivity).filter(u => u.count > 10).length
-    }
-
-    const topUsers = Object.values(userActivity)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10)
-
-    // County preferences
-    const countyStats = {}
-    favorites.forEach(fav => {
-      if (!countyStats[fav.county]) {
-        countyStats[fav.county] = {
-          count: 0,
-          users: new Set(),
-          avgPerUser: 0
-        }
-      }
-      countyStats[fav.county].count++
-      countyStats[fav.county].users.add(fav.user_id)
-    })
-
-    Object.keys(countyStats).forEach(county => {
-      countyStats[county].avgPerUser = (countyStats[county].count / countyStats[county].users.size).toFixed(1)
-    })
-
-    return {
-      popularParcels,
-      dailyActivity,
-      engagementLevels,
-      topUsers,
-      countyStats,
-      totalUsers: Object.keys(userActivity).length,
-      avgFavoritesPerUser: (favorites.length / Object.keys(userActivity).length).toFixed(1)
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -587,7 +577,6 @@ const AdminDashboard = () => {
             {[
               { id: 'overview', name: 'Overview', icon: ChartBarIcon },
               { id: 'favorites', name: 'All Favorites', icon: StarIcon },
-              { id: 'analytics', name: 'Favorites Analytics', icon: ChartBarIcon },
               { id: 'users', name: 'User Management', icon: UserGroupIcon },
               { id: 'terms', name: 'Terms Compliance', icon: ShieldCheckIcon }
             ].map((tab) => (
@@ -1132,231 +1121,6 @@ const AdminDashboard = () => {
           </motion.div>
         )}
 
-        {/* Analytics Tab */}
-        {activeTab === 'analytics' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            {(() => {
-              const analytics = getAnalyticsData()
-              
-              return (
-                <>
-                  {/* Analytics Header */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Favorites Analytics Dashboard
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Detailed insights and trends for user favorite activity
-                    </p>
-                  </div>
-
-                  {/* Key Metrics Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                      <div className="text-3xl font-bold text-blue-600">
-                        {analytics.totalUsers}
-                      </div>
-                      <div className="text-sm text-gray-500">Active Users</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        Users with favorites
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                      <div className="text-3xl font-bold text-green-600">
-                        {analytics.avgFavoritesPerUser}
-                      </div>
-                      <div className="text-sm text-gray-500">Avg per User</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        Favorites per active user
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                      <div className="text-3xl font-bold text-purple-600">
-                        {analytics.popularParcels.length}
-                      </div>
-                      <div className="text-sm text-gray-500">Popular Parcels</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        Favorited by multiple users
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow p-6 text-center">
-                      <div className="text-3xl font-bold text-amber-600">
-                        {Object.keys(analytics.countyStats).length}
-                      </div>
-                      <div className="text-sm text-gray-500">Active Counties</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        Counties with activity
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* User Engagement Levels */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4">User Engagement Levels</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {analytics.engagementLevels.light}
-                        </div>
-                        <div className="text-sm text-blue-800">Light Users</div>
-                        <div className="text-xs text-blue-600">1-2 favorites</div>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">
-                          {analytics.engagementLevels.moderate}
-                        </div>
-                        <div className="text-sm text-green-800">Moderate Users</div>
-                        <div className="text-xs text-green-600">3-10 favorites</div>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-purple-50 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {analytics.engagementLevels.heavy}
-                        </div>
-                        <div className="text-sm text-purple-800">Heavy Users</div>
-                        <div className="text-xs text-purple-600">10+ favorites</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Top Users and Popular Parcels */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Top Users */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                      <h4 className="text-lg font-medium text-gray-900 mb-4">Most Active Users</h4>
-                      <div className="space-y-3">
-                        {analytics.topUsers.slice(0, 8).map((userStat, index) => (
-                          <div key={userStat.user?.email || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-medium text-xs mr-3">
-                                {(userStat.user?.full_name || userStat.user?.email || 'U').charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {userStat.user?.full_name || 'Unknown User'}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {userStat.counties.size} counties • Active for{' '}
-                                  {Math.floor((userStat.lastActivity - userStat.firstActivity) / (1000 * 60 * 60 * 24))} days
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-primary-600">
-                                {userStat.count}
-                              </div>
-                              <div className="text-xs text-gray-500">favorites</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Popular Parcels */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                      <h4 className="text-lg font-medium text-gray-900 mb-4">Most Popular Parcels</h4>
-                      <div className="space-y-3">
-                        {analytics.popularParcels.length > 0 ? (
-                          analytics.popularParcels.map((parcel) => (
-                            <div key={`${parcel.county}-${parcel.parcelId}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div>
-                                <div className="text-sm font-medium text-gray-900 font-mono">
-                                  {parcel.parcelId}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {parcel.county} County
-                                  {parcel.sample?.parcel_address && ` • ${parcel.sample.parcel_address}`}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-red-600">
-                                  {parcel.count}
-                                </div>
-                                <div className="text-xs text-gray-500">users</div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <StarIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm">No parcels with multiple favorites yet</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* County Analysis */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4">County Activity Analysis</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(analytics.countyStats).map(([county, stats]) => (
-                        <div key={county} className="p-4 border border-gray-200 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-medium text-gray-900">{county} County</h5>
-                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                              {stats.count} favorites
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <div>👥 {stats.users.size} active users</div>
-                            <div>📊 {stats.avgPerUser} avg per user</div>
-                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                              <div 
-                                className="bg-blue-600 h-2 rounded-full"
-                                style={{ 
-                                  width: `${(stats.count / Math.max(...Object.values(analytics.countyStats).map(s => s.count))) * 100}%` 
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Activity Timeline */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4">Daily Activity (Last 30 Days)</h4>
-                    <div className="h-64 overflow-x-auto">
-                      <div className="flex items-end space-x-1 h-full min-w-max">
-                        {Object.entries(analytics.dailyActivity).map(([date, count]) => {
-                          const maxCount = Math.max(...Object.values(analytics.dailyActivity))
-                          const height = maxCount > 0 ? (count / maxCount) * 200 : 0
-                          
-                          return (
-                            <div key={date} className="flex flex-col items-center">
-                              <div 
-                                className="w-6 bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600"
-                                style={{ height: `${height}px`, minHeight: count > 0 ? '4px' : '0px' }}
-                                title={`${date}: ${count} favorites`}
-                              ></div>
-                              <div className="text-xs text-gray-500 mt-1 transform -rotate-45 origin-left w-12">
-                                {new Date(date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-2 text-center">
-                      Hover over bars to see daily counts
-                    </div>
-                  </div>
-                </>
-              )
-            })()}
-          </motion.div>
-        )}
-
         {/* Users Tab */}
         {activeTab === 'users' && (
           <motion.div
@@ -1589,7 +1353,7 @@ const AdminDashboard = () => {
                                 <EyeIcon className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => openUserModal(user)}
+                                onClick={() => openEditUserModal(user)}
                                 className="text-gray-600 hover:text-gray-900 p-1 rounded"
                                 title="Edit User"
                               >
@@ -1624,9 +1388,15 @@ const AdminDashboard = () => {
               className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">User Details</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  {isEditMode ? 'Edit User' : 'User Details'}
+                </h3>
                 <button
-                  onClick={() => setShowUserModal(false)}
+                  onClick={() => {
+                    setShowUserModal(false)
+                    setIsEditMode(false)
+                    setEditUserForm({ full_name: '', role: 'user' })
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <XMarkIcon className="w-6 h-6" />
@@ -1639,21 +1409,57 @@ const AdminDashboard = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-medium text-xl">
                     {(selectedUser.full_name || selectedUser.email || 'U').charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <h4 className="text-xl font-medium text-gray-900">
-                      {selectedUser.full_name || 'Unknown User'}
-                    </h4>
-                    <p className="text-gray-500">{selectedUser.email}</p>
-                    <div className="flex items-center mt-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        selectedUser.role === 'admin' 
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedUser.role === 'admin' && <ShieldCheckIcon className="w-3 h-3 mr-1" />}
-                        {selectedUser.role}
-                      </span>
-                    </div>
+                  <div className="flex-1">
+                    {isEditMode ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Full Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editUserForm.full_name}
+                            onChange={(e) => setEditUserForm({...editUserForm, full_name: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            placeholder="Enter full name"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Email Address</p>
+                          <p className="text-gray-900">{selectedUser.email}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Role
+                          </label>
+                          <select
+                            value={editUserForm.role}
+                            onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <h4 className="text-xl font-medium text-gray-900">
+                          {selectedUser.full_name || 'Unknown User'}
+                        </h4>
+                        <p className="text-gray-500">{selectedUser.email}</p>
+                        <div className="flex items-center mt-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            selectedUser.role === 'admin' 
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {selectedUser.role === 'admin' && <ShieldCheckIcon className="w-3 h-3 mr-1" />}
+                            {selectedUser.role}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -1713,12 +1519,38 @@ const AdminDashboard = () => {
               </div>
               
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Close
-                </button>
+                {isEditMode ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsEditMode(false)
+                        setEditUserForm({ full_name: '', role: 'user' })
+                      }}
+                      disabled={createUserLoading}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveUser}
+                      disabled={createUserLoading}
+                      className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {createUserLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowUserModal(false)
+                      setIsEditMode(false)
+                      setEditUserForm({ full_name: '', role: 'user' })
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -1925,6 +1757,9 @@ const AdminDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           User Agent
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1945,6 +1780,16 @@ const AdminDashboard = () => {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                             {acceptance.user_agent}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleDeleteTermsAcceptance(acceptance.user_id, acceptance.user_email)}
+                              className="inline-flex items-center px-2 py-1 border border-red-300 rounded text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                              title="Delete terms acceptance - user will need to accept terms again"
+                            >
+                              <TrashIcon className="w-3 h-3 mr-1" />
+                              Reset
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1970,6 +1815,7 @@ const AdminDashboard = () => {
                     <li>• Users must accept terms before accessing any portal features</li>
                     <li>• Terms specifically prohibit sharing data with external parties including real estate agents</li>
                     <li>• Records are maintained for compliance and audit purposes</li>
+                    <li>• Admins can reset terms acceptance to require users to re-accept updated terms</li>
                   </ul>
                 </div>
               </div>

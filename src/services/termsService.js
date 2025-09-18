@@ -120,6 +120,32 @@ class TermsService {
       return []
     }
   }
+
+  // Admin function to delete terms acceptance for a user
+  async deleteTermsAcceptance(userId) {
+    try {
+      if (!userId) {
+        throw new Error('User ID is required')
+      }
+
+      const { data, error } = await supabase
+        .from('terms_acceptance')
+        .delete()
+        .eq('user_id', userId)
+        .select()
+
+      if (error) {
+        console.error('Error deleting terms acceptance:', error)
+        throw error
+      }
+
+      console.log('Terms acceptance deleted:', data)
+      return { success: true, data }
+    } catch (error) {
+      console.error('Error in deleteTermsAcceptance:', error)
+      return { success: false, error: error.message }
+    }
+  }
 }
 
 const termsService = new TermsService()
