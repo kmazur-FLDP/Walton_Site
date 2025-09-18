@@ -627,6 +627,313 @@ class AdminService {
       return await this.getAllFavorites()
     }
   }
+
+  /**
+   * Get all access logs with optional filtering
+   * @param {Object} filters - Filter options
+   * @param {string} filters.userId - Filter by user ID
+   * @param {string} filters.eventType - Filter by event type
+   * @param {string} filters.dateFrom - Filter from date (ISO string)
+   * @param {string} filters.dateTo - Filter to date (ISO string)
+   * @param {number} filters.limit - Limit number of results (default 100)
+   * @returns {Promise<Array>} Array of access logs
+   */
+  async getAccessLogs(filters = {}) {
+    try {
+      const isAdminUser = await this.isAdmin()
+      if (!isAdminUser) throw new Error('Access denied: Admin role required')
+
+      let query = supabase
+        .from('access_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      // Apply filters
+      if (filters.userId) {
+        query = query.eq('user_id', filters.userId)
+      }
+
+      if (filters.eventType) {
+        query = query.eq('event_type', filters.eventType)
+      }
+
+      if (filters.dateFrom) {
+        query = query.gte('created_at', filters.dateFrom)
+      }
+
+      if (filters.dateTo) {
+        query = query.lte('created_at', filters.dateTo)
+      }
+
+      // Apply limit (default 100)
+      const limit = filters.limit || 100
+      query = query.limit(limit)
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching access logs:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get access log statistics
+   * @returns {Promise<Object>} Access log stats
+   */
+  async getAccessLogStats() {
+    try {
+      const isAdminUser = await this.isAdmin()
+      if (!isAdminUser) throw new Error('Access denied: Admin role required')
+
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+      // Get recent access logs for analysis
+      const { data: recentLogs, error } = await supabase
+        .from('access_logs')
+        .select('*')
+        .gte('created_at', thirtyDaysAgo)
+
+      if (error) throw error
+
+      const logs = recentLogs || []
+
+      // Calculate statistics
+      const totalAccess = logs.length
+      const successfulLogins = logs.filter(log => log.event_type === 'login' && log.success).length
+      const failedLogins = logs.filter(log => log.event_type === 'login' && !log.success).length
+      const uniqueUsers = new Set(logs.filter(log => log.user_id).map(log => log.user_id)).size
+      const uniqueIPs = new Set(logs.map(log => log.ip_address)).size
+
+      // Time-based stats
+      const accessLast7Days = logs.filter(log => log.created_at >= sevenDaysAgo).length
+      const accessLast24Hours = logs.filter(log => log.created_at >= oneDayAgo).length
+
+      // Geographic distribution
+      const countryStats = {}
+      logs.forEach(log => {
+        const country = log.location_country || 'Unknown'
+        countryStats[country] = (countryStats[country] || 0) + 1
+      })
+
+      // Suspicious activity detection
+      const suspiciousIPs = this.detectSuspiciousIPs(logs)
+      const multiLocationUsers = this.detectMultiLocationUsers(logs)
+
+      return {
+        totalAccess,
+        successfulLogins,
+        failedLogins,
+        uniqueUsers,
+        uniqueIPs,
+        accessLast7Days,
+        accessLast24Hours,
+        countryStats,
+        suspiciousIPs: suspiciousIPs.length,
+        multiLocationUsers: multiLocationUsers.length,
+        loginSuccessRate: totalAccess > 0 ? ((successfulLogins / (successfulLogins + failedLogins)) * 100).toFixed(1) : 0
+      }
+    } catch (error) {
+      console.error('Error fetching access log stats:', error)
+      return {
+        totalAccess: 0,
+        successfulLogins: 0,
+        failedLogins: 0,
+        uniqueUsers: 0,
+        uniqueIPs: 0,
+        accessLast7Days: 0,
+        accessLast24Hours: 0,
+        countryStats: {},
+        suspiciousIPs: 0,
+        multiLocationUsers: 0,
+        loginSuccessRate: 0
+      }
+    }
+  }
+
+  /**
+   * Detect suspicious IP addresses based on activity patterns
+   * @param {Array} logs - Access logs
+   * @returns {Array} Suspicious IP addresses with details
+   */
+  detectSuspiciousIPs(logs) {
+    const ipStats = {}
+    
+    logs.forEach(log => {
+      const ip = log.ip_address
+      if (!ipStats[ip]) {
+        ipStats[ip] = {
+          ip,
+          totalAccess: 0,
+          failedLogins: 0,
+          successfulLogins: 0,
+          users: new Set(),
+          countries: new Set(),
+          firstSeen: log.created_at,
+          lastSeen: log.created_at
+        }
+      }
+
+      const stats = ipStats[ip]
+      stats.totalAccess++
+      
+      if (log.event_type === 'login') {
+        if (log.success) {
+          stats.successfulLogins++
+        } else {
+          stats.failedLogins++
+        }
+      }
+
+      if (log.user_id) {
+        stats.users.add(log.user_id)
+      }
+
+      if (log.location_country) {
+        stats.countries.add(log.location_country)
+      }
+
+      if (log.created_at < stats.firstSeen) {
+        stats.firstSeen = log.created_at
+      }
+
+      if (log.created_at > stats.lastSeen) {
+        stats.lastSeen = log.created_at
+      }
+    })
+
+    // Define suspicious criteria
+    const suspicious = Object.values(ipStats).filter(stats => {
+      const failureRate = stats.totalAccess > 0 ? (stats.failedLogins / stats.totalAccess) : 0
+      const multipleUsers = stats.users.size > 3 // More than 3 users from same IP
+      const highFailures = stats.failedLogins > 10 // More than 10 failed attempts
+      const highFailureRate = failureRate > 0.5 // More than 50% failures
+
+      return multipleUsers || highFailures || highFailureRate
+    })
+
+    return suspicious.map(stats => ({
+      ...stats,
+      users: Array.from(stats.users),
+      countries: Array.from(stats.countries),
+      suspicionReasons: [
+        stats.users.size > 3 && 'Multiple users from same IP',
+        stats.failedLogins > 10 && 'High number of failed logins',
+        (stats.failedLogins / stats.totalAccess) > 0.5 && 'High failure rate'
+      ].filter(Boolean)
+    }))
+  }
+
+  /**
+   * Detect users accessing from multiple geographic locations
+   * @param {Array} logs - Access logs
+   * @returns {Array} Users with multi-location access
+   */
+  detectMultiLocationUsers(logs) {
+    const userStats = {}
+
+    logs.forEach(log => {
+      if (!log.user_id || !log.location_country) return
+
+      if (!userStats[log.user_id]) {
+        userStats[log.user_id] = {
+          userId: log.user_id,
+          email: log.email,
+          countries: new Set(),
+          ips: new Set(),
+          locations: new Set()
+        }
+      }
+
+      const stats = userStats[log.user_id]
+      stats.countries.add(log.location_country)
+      stats.ips.add(log.ip_address)
+      
+      if (log.location_city && log.location_region) {
+        stats.locations.add(`${log.location_city}, ${log.location_region}`)
+      }
+    })
+
+    // Users with access from multiple countries or many different IPs
+    const multiLocation = Object.values(userStats).filter(stats => 
+      stats.countries.size > 1 || stats.ips.size > 5
+    )
+
+    return multiLocation.map(stats => ({
+      ...stats,
+      countries: Array.from(stats.countries),
+      ips: Array.from(stats.ips),
+      locations: Array.from(stats.locations)
+    }))
+  }
+
+  /**
+   * Get recent suspicious activities
+   * @param {number} hours - Hours to look back (default 24)
+   * @returns {Promise<Array>} Recent suspicious activities
+   */
+  async getRecentSuspiciousActivity(hours = 24) {
+    try {
+      const isAdminUser = await this.isAdmin()
+      if (!isAdminUser) throw new Error('Access denied: Admin role required')
+
+      const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+
+      const { data: recentLogs, error } = await supabase
+        .from('access_logs')
+        .select('*')
+        .gte('created_at', cutoffTime)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const logs = recentLogs || []
+      const suspiciousIPs = this.detectSuspiciousIPs(logs)
+      const multiLocationUsers = this.detectMultiLocationUsers(logs)
+
+      // Combine and format suspicious activities
+      const activities = []
+
+      suspiciousIPs.forEach(ip => {
+        activities.push({
+          type: 'suspicious_ip',
+          severity: 'high',
+          title: `Suspicious IP Activity: ${ip.ip}`,
+          description: `IP ${ip.ip} has ${ip.suspicionReasons.join(', ')}`,
+          details: ip,
+          timestamp: ip.lastSeen
+        })
+      })
+
+      multiLocationUsers.forEach(user => {
+        activities.push({
+          type: 'multi_location_user',
+          severity: user.countries.size > 2 ? 'high' : 'medium',
+          title: `Multi-Location Access: ${user.email}`,
+          description: `User accessed from ${user.countries.length} countries: ${user.countries.join(', ')}`,
+          details: user,
+          timestamp: new Date().toISOString()
+        })
+      })
+
+      // Sort by severity and timestamp
+      activities.sort((a, b) => {
+        if (a.severity !== b.severity) {
+          return a.severity === 'high' ? -1 : 1
+        }
+        return new Date(b.timestamp) - new Date(a.timestamp)
+      })
+
+      return activities
+    } catch (error) {
+      console.error('Error fetching suspicious activity:', error)
+      return []
+    }
+  }
 }
 
 // Create and export singleton instance

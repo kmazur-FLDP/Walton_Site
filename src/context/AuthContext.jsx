@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import accessLogService from '../services/accessLogService'
 
 const AuthContext = createContext({})
 
@@ -14,10 +15,39 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [sessionId, setSessionId] = useState(null)
   
   // Session timeout (30 minutes of inactivity)
   const SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes in milliseconds
   const [lastActivity, setLastActivity] = useState(Date.now())
+
+  // Define signOut function first (before useEffect that references it)
+  const signOut = useCallback(async () => {
+    try {
+      // Log logout before clearing data (non-blocking)
+      if (user) {
+        try {
+          await accessLogService.logLogout(user.id, user.email, sessionId)
+        } catch (logError) {
+          console.warn('Access logging failed:', logError.message)
+        }
+      }
+
+      // Clear any local storage data
+      localStorage.clear()
+      sessionStorage.clear()
+      
+      const { error } = await supabase.auth.signOut()
+      
+      // Clear session ID
+      setSessionId(null)
+      
+      return { error }
+    } catch (err) {
+      console.error('Error in signOut:', err)
+      return { error: err }
+    }
+  }, [user, sessionId])
 
   // Update last activity time on user interaction
   useEffect(() => {
@@ -49,13 +79,20 @@ export const AuthProvider = ({ children }) => {
 
     const interval = setInterval(checkTimeout, 60000) // Check every minute
     return () => clearInterval(interval)
-  }, [user, lastActivity])
+  }, [user, lastActivity, SESSION_TIMEOUT, signOut])
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
+
+      // If user exists, log session refresh
+      if (session?.user) {
+        const newSessionId = accessLogService.generateSessionId()
+        setSessionId(newSessionId)
+        accessLogService.logSessionRefresh(session.user.id, session.user.email, newSessionId)
+      }
     })
 
     // Listen for auth changes
@@ -81,11 +118,43 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { data, error }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        // Log failed login attempt (non-blocking)
+        try {
+          await accessLogService.logFailedLogin(email, error.message)
+        } catch (logError) {
+          console.warn('Access logging failed:', logError.message)
+        }
+        return { data, error }
+      }
+
+      if (data.user) {
+        // Generate session ID and log successful login (non-blocking)
+        try {
+          const newSessionId = accessLogService.generateSessionId()
+          setSessionId(newSessionId)
+          await accessLogService.logLogin(data.user.id, data.user.email, newSessionId)
+        } catch (logError) {
+          console.warn('Access logging failed:', logError.message)
+        }
+      }
+
+      return { data, error }
+    } catch (err) {
+      console.error('Error in signIn:', err)
+      try {
+        await accessLogService.logFailedLogin(email, 'system_error')
+      } catch (logError) {
+        console.warn('Access logging failed:', logError.message)
+      }
+      return { data: null, error: err }
+    }
   }
 
   const signUp = async (email, password) => {
@@ -94,15 +163,6 @@ export const AuthProvider = ({ children }) => {
       password,
     })
     return { data, error }
-  }
-
-  const signOut = async () => {
-    // Clear any local storage data
-    localStorage.clear()
-    sessionStorage.clear()
-    
-    const { error } = await supabase.auth.signOut()
-    return { error }
   }
 
   const value = {

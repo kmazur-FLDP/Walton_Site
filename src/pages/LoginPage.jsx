@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
+import CompactTermsModal from '../components/CompactTermsModal'
+import termsService from '../services/termsService'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
@@ -8,18 +10,39 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
   
   const { signIn } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Check if terms are accepted
+    if (!termsAccepted) {
+      setError('Please accept the Terms and Conditions to continue')
+      return
+    }
+
     setLoading(true)
     setError('')
 
-    const { error } = await signIn(email, password)
+    // Sign in first
+    const { error: signInError } = await signIn(email, password)
     
-    if (error) {
-      setError(error.message)
+    if (signInError) {
+      setError(signInError.message)
+      setLoading(false)
+      return
+    }
+
+    // Record terms acceptance for this login session
+    try {
+      const sessionId = `login-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      await termsService.acceptTermsForLogin(sessionId)
+    } catch (termsError) {
+      console.warn('Failed to record terms acceptance:', termsError)
+      // Don't fail login for terms recording issues
     }
     
     setLoading(false)
@@ -114,19 +137,69 @@ const LoginPage = () => {
               </div>
             </div>
 
+            {/* Terms and Conditions Acceptance */}
+            <div className="space-y-3">
+              <div 
+                className={`border-2 rounded-lg p-3 transition-colors cursor-pointer ${
+                  termsAccepted 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-gray-300 bg-gray-50 hover:bg-blue-50'
+                }`}
+                onClick={() => setTermsAccepted(!termsAccepted)}
+              >
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={() => {}} // Handled by parent div click
+                    className="mt-0.5 h-4 w-4 text-primary-600 focus:ring-primary-500 border-2 border-gray-400 rounded pointer-events-none"
+                  />
+                  <div className="flex-1 pointer-events-none">
+                    <div className="text-sm font-medium text-gray-900">
+                      {termsAccepted ? '✅ ' : '☐ '}
+                      I agree to the Terms and Conditions for this login session
+                    </div>
+                    <div className="text-xs mt-1 text-gray-600">
+                      Required for each login to ensure data confidentiality and compliance
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-xs text-primary-600 hover:text-primary-800 underline"
+                >
+                  View Terms and Conditions
+                </button>
+              </div>
+            </div>
+
             <div>
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                disabled={loading || !termsAccepted}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white transition-colors duration-200 ${
+                  (loading || !termsAccepted)
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'
+                }`}
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading 
+                  ? 'Signing in...' 
+                  : !termsAccepted 
+                    ? 'Accept Terms to Sign In' 
+                    : 'Sign in'
+                }
               </button>
             </div>
           </form>
         </div>
 
         {/* Disclaimer Notice */}
+                {/* Disclaimer Notice */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
@@ -138,11 +211,14 @@ const LoginPage = () => {
               <h3 className="text-sm font-medium text-blue-800">
                 Disclaimer
               </h3>
-              <div className="mt-1 text-sm text-blue-700">
+              <div className="mt-1 text-sm text-blue-700 space-y-2">
                 <p>
-                  The information provided in this portal is for informational purposes only. 
-                  While we strive for accuracy, property data may not be current or complete. 
-                  Please verify all information independently before making any decisions.
+                  The information provided in this portal is for informational purposes only and is derived from publicly available data sources. 
+                  While we strive for accuracy, property data may not be current, complete, or error-free.
+                </p>
+                <p>
+                  <strong>No Warranty:</strong> We make no representations or warranties regarding the accuracy, completeness, or reliability of the data presented. 
+                  Users should verify all information independently through official county records and other authoritative sources before making any decisions.
                 </p>
               </div>
             </div>
@@ -156,6 +232,12 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
+
+      {/* Compact Terms Modal */}
+      <CompactTermsModal 
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
     </div>
   )
 }

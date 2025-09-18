@@ -29,6 +29,48 @@ class TermsService {
     }
   }
 
+  // Record terms acceptance for login session
+  async acceptTermsForLogin(sessionId = null) {
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !userData.user) {
+        throw new Error('No authenticated user found')
+      }
+
+      const user = userData.user
+
+      // Get client IP and user agent for audit trail
+      const userAgent = navigator.userAgent
+      
+      const acceptanceData = {
+        user_id: user.id,
+        user_email: user.email,
+        terms_version: '1.0',
+        user_agent: userAgent,
+        accepted_at: new Date().toISOString(),
+        session_id: sessionId || 'login-session-' + Date.now(), // Track this specific login session
+        acceptance_type: 'login_required' // Distinguish from voluntary acceptance
+      }
+
+      const { data, error } = await supabase
+        .from('terms_acceptance')
+        .insert(acceptanceData) // Always insert new record for each login
+        .select()
+
+      if (error) {
+        console.error('Error recording login terms acceptance:', error)
+        throw error
+      }
+
+      console.log('Login terms acceptance recorded:', data)
+      return { success: true, data }
+    } catch (error) {
+      console.error('Error in acceptTermsForLogin:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
   // Record terms acceptance
   async acceptTerms() {
     try {

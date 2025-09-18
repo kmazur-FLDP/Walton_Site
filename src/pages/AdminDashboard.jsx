@@ -7,6 +7,7 @@ import {
   ChartBarIcon,
   ArrowLeftIcon,
   EyeIcon,
+  EyeSlashIcon,
   TrashIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -26,6 +27,7 @@ import adminService from '../services/adminService'
 import termsService from '../services/termsService'
 import { CardSkeleton, TableSkeleton } from '../components/SkeletonLoader'
 import { AdminOnlyState, DataErrorState } from '../components/EmptyState'
+import AccessLogs from '../components/AccessLogs'
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
@@ -578,6 +580,7 @@ const AdminDashboard = () => {
               { id: 'overview', name: 'Overview', icon: ChartBarIcon },
               { id: 'favorites', name: 'All Favorites', icon: StarIcon },
               { id: 'users', name: 'User Management', icon: UserGroupIcon },
+              { id: 'access-logs', name: 'Access Logs', icon: EyeSlashIcon },
               { id: 'terms', name: 'Terms Compliance', icon: ShieldCheckIcon }
             ].map((tab) => (
               <button
@@ -1819,6 +1822,19 @@ const AdminDashboard = () => {
                   </ul>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Access Logs Tab */}
+        {activeTab === 'access-logs' && (
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <AccessLogs />
             </motion.div>
           </div>
         )}
