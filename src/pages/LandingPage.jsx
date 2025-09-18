@@ -665,8 +665,13 @@ const LandingPage = () => {
                           </div>
                           <button 
                             onClick={() => {
-                              const county = counties.find(c => c.name === favorite.county)
-                              if (county) navigate(county.path)
+                              // Find county by matching either full name or short name
+                              const county = counties.find(c => 
+                                c.name === favorite.county || 
+                                c.name === `${favorite.county} County` ||
+                                c.name.replace(' County', '') === favorite.county
+                              )
+                              if (county) navigate(`${county.path}?parcel=${encodeURIComponent(favorite.parcel_id)}`)
                             }}
                             className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                           >
@@ -713,7 +718,12 @@ const LandingPage = () => {
                           </div>
                           <button 
                             onClick={() => {
-                              const county = counties.find(c => c.name === visit.county)
+                              // Find county by matching either full name or short name
+                              const county = counties.find(c => 
+                                c.name === visit.county || 
+                                c.name === `${visit.county} County` ||
+                                c.name.replace(' County', '') === visit.county
+                              )
                               if (county) navigate(county.path)
                             }}
                             className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -743,7 +753,12 @@ const LandingPage = () => {
                     onClick={() => {
                       const mostVisited = recentActivity.countyVisits[0]
                       if (mostVisited) {
-                        const county = counties.find(c => c.name === mostVisited.county)
+                        // Find county by matching either full name or short name
+                        const county = counties.find(c => 
+                          c.name === mostVisited.county || 
+                          c.name === `${mostVisited.county} County` ||
+                          c.name.replace(' County', '') === mostVisited.county
+                        )
                         if (county) navigate(county.path)
                       }
                     }}

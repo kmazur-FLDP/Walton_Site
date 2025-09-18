@@ -39,8 +39,13 @@ const FavoritesPage = () => {
     }
   }
 
-  const handleViewOnMap = (county) => {
-    navigate(`/${county.toLowerCase()}`)
+  const handleViewOnMap = (county, parcelId = null) => {
+    const path = `/${county.toLowerCase()}`
+    if (parcelId) {
+      navigate(`${path}?parcel=${encodeURIComponent(parcelId)}`)
+    } else {
+      navigate(path)
+    }
   }
 
   if (loading) {
@@ -174,7 +179,7 @@ const FavoritesPage = () => {
                         
                         <div className="flex space-x-2 ml-4">
                           <button
-                            onClick={() => handleViewOnMap(county)}
+                            onClick={() => handleViewOnMap(county, favorite.parcel_id)}
                             className="px-3 py-1 bg-primary-600 text-white text-sm rounded hover:bg-primary-700"
                           >
                             View

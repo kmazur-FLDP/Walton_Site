@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, LayersControl } from 'react-leaflet'
 import { StarIcon as StarOutline, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
@@ -78,6 +78,7 @@ L.Icon.Default.mergeOptions({
 
 const CitrusMapPage = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const mapRef = useRef()
   const [favorites, setFavorites] = useState(new Set())
   const [selectedParcel, setSelectedParcel] = useState(null)
@@ -137,6 +138,42 @@ const CitrusMapPage = () => {
 
     loadFavorites()
   }, [])
+
+  // Handle URL parameter for parcel selection
+  useEffect(() => {
+    const parcelParam = searchParams.get('parcel')
+    if (parcelParam && parcelData) {
+      // Find the parcel in the data
+      const parcel = parcelData.features.find(feature => 
+        feature.properties.PARCEL_UID === parcelParam ||
+        feature.properties.PARCEL_ID === parcelParam ||
+        String(feature.properties.PARCEL_UID) === String(parcelParam) ||
+        String(feature.properties.PARCEL_ID) === String(parcelParam)
+      )
+      
+      if (parcel) {
+        // Select the parcel
+        setSelectedParcel(parcel.properties.PARCEL_UID || parcel.properties.PARCEL_ID)
+        setPanelParcel(parcel.properties)
+        setShowPanel(true)
+        
+        // Zoom to the parcel
+        if (mapRef.current && parcel.geometry) {
+          try {
+            const bounds = L.geoJSON(parcel).getBounds()
+            mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+          } catch (err) {
+            console.error('Error zooming to parcel:', err)
+          }
+        }
+        
+        // Clear the URL parameter to avoid re-triggering
+        const newSearchParams = new URLSearchParams(searchParams)
+        newSearchParams.delete('parcel')
+        navigate({ search: newSearchParams.toString() }, { replace: true })
+      }
+    }
+  }, [parcelData, searchParams, navigate])
 
   // Effect to zoom to parcels when both map and data are ready
   // Function to zoom map to parcel bounds (moved above effect to avoid TDZ in dependency array)
