@@ -11,6 +11,7 @@ import TestCitrusMap from './pages/TestCitrusMap'
 import CitrusDebugMap from './pages/CitrusDebugMap'
 import ManateeMapPage from './pages/ManateeMapPage'
 import FavoritesPage from './pages/FavoritesPage'
+import ParcelAnalysisPage from './pages/ParcelAnalysisPage'
 import AdminDashboard from './pages/AdminDashboard'
 import Navbar from './components/Navbar'
 import LoadingSpinner from './components/LoadingSpinner'
@@ -140,6 +141,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <FavoritesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parcel-analysis"
+          element={
+            <ProtectedRoute>
+              <ParcelAnalysisPage />
             </ProtectedRoute>
           }
         />

@@ -62,6 +62,12 @@ const Navbar = () => {
                   >
                     Favorites
                   </button>
+                  <button
+                    onClick={() => navigate('/parcel-analysis')}
+                    className="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    Parcel Analysis
+                  </button>
                   {isAdmin && (
                     <button
                       onClick={() => navigate('/admin')}
@@ -145,6 +151,12 @@ const Navbar = () => {
                 className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 w-full text-left"
               >
                 Favorites
+              </button>
+              <button
+                onClick={() => navigate('/parcel-analysis')}
+                className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 w-full text-left"
+              >
+                Parcel Analysis
               </button>
               {isAdmin && (
                 <button
