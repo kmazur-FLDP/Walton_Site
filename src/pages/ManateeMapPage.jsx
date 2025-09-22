@@ -7,6 +7,7 @@ import dataService from '../services/dataService'
 import favoritesService from '../services/favoritesService'
 import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
+import FloodplainLayer from '../components/FloodplainLayer'
 import PrintButton from '../components/PrintButton'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -76,6 +77,9 @@ L.Icon.Default.mergeOptions({
 })
 
 const ManateeMapPage = () => {
+  // TEST: Console log to verify code is loading
+  console.log('🔥 ManateeMapPage is loading - TEST CHANGE')
+  
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const mapRef = useRef()
