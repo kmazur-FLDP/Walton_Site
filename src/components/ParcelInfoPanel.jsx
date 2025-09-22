@@ -100,16 +100,6 @@ const ParcelInfoPanel = ({
     return 'N/A'
   }
 
-  // Get square footage based on county
-  const getSquareFootage = () => {
-    if (county === 'Hernando') return getProp('LAND_SQFT')
-    if (county === 'Citrus') return getProp('SQFT')
-    if (county === 'Manatee') return getProp('LAND_SQFT_CAMA')
-    if (county === 'Pasco') return getProp('LAND_SQ_FT')
-    if (county === 'Polk') return getProp('LND_SQFOOT')
-    return getProp('SQFT')
-  }
-
   // Get zoning information based on county
   const getZoning = () => {
     if (county === 'Hernando') return getProp('ZONING', 'N/A')
@@ -304,10 +294,6 @@ const ParcelInfoPanel = ({
                 {expandedSections.location && (
                   <div className="px-3 pb-3 space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Square Feet:</span>
-                      <span className="font-medium">{getSquareFootage()}</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className="text-gray-600">Legal Description:</span>
                       <span className="font-medium text-right max-w-48 break-words">
                         {getLegalDescription()}
@@ -382,18 +368,6 @@ const ParcelInfoPanel = ({
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
-          <div className="flex space-x-3">
-            <button className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
-              Generate Report
-            </button>
-            <button className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
-              Export Data
-            </button>
-          </div>
         </div>
       </motion.div>
     </AnimatePresence>
