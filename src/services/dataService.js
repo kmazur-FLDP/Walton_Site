@@ -90,6 +90,60 @@ class DataService {
   }
 
   /**
+   * Load Citrus County zoning data
+   * @returns {Promise<Object|null>} GeoJSON zoning data
+   */
+  async loadCitrusZoning() {
+    const cacheKey = 'citrus-zoning'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Citrus_Zoning.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Citrus zoning not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Citrus zoning:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Citrus County Future Land Use (FLU) data
+   * @returns {Promise<Object|null>} GeoJSON FLU data
+   */
+  async loadCitrusFLU() {
+    const cacheKey = 'citrus-flu'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Citrus_FLU.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Citrus FLU not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Citrus FLU:', error)
+      return null
+    }
+  }
+
+  /**
    * Load Pasco County parcels
    * @returns {Promise<Object|null>} GeoJSON parcel data
    */

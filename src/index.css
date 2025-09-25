@@ -197,3 +197,36 @@
 .print-button {
   @apply bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2;
 }
+
+/* Custom popup styling for Leaflet popups */
+.custom-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 0 !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+.custom-popup .leaflet-popup-close-button {
+  background: #f3f4f6 !important;
+  border-radius: 4px !important;
+  width: 24px !important;
+  height: 24px !important;
+  right: 8px !important;
+  top: 8px !important;
+  color: #6b7280 !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+.custom-popup .leaflet-popup-close-button:hover {
+  background: #e5e7eb !important;
+  color: #374151 !important;
+}
+
+.custom-popup .leaflet-popup-tip {
+  border-top-color: #e5e7eb !important;
+}

@@ -10,6 +10,7 @@ import { MapSkeleton } from '../components/SkeletonLoader'
 import MapLegend from '../components/MapLegend'
 import FloodplainLayer from '../components/FloodplainLayer'
 import PrintButton from '../components/PrintButton'
+import { getCitrusZoningStyle, getCitrusFLUStyle, getCitrusZoningLegend, getCitrusFLULegend } from '../utils/colorMaps'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -95,6 +96,16 @@ const CitrusMapPage = () => {
   const [mapInstance, setMapInstance] = useState(null)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
+  
+  // Planning layer states
+  const [showZoning, setShowZoning] = useState(false)
+  const [showFLU, setShowFLU] = useState(false)
+  const [zoningData, setZoningData] = useState(null)
+  const [fluData, setFLUData] = useState(null)
+  const [zoningLoading, setZoningLoading] = useState(false)
+  const [fluLoading, setFLULoading] = useState(false)
+
+
 
   // Load Citrus parcel data when component mounts
   useEffect(() => {
@@ -123,6 +134,29 @@ const CitrusMapPage = () => {
       }
     }
     loadMapData()
+  }, [])
+
+  // Load planning data (zoning and FLU) when component mounts
+  useEffect(() => {
+    const loadPlanningData = async () => {
+      try {
+        const [zoning, flu] = await Promise.all([
+          dataService.loadCitrusZoning(),
+          dataService.loadCitrusFLU()
+        ])
+        
+        if (zoning) {
+          setZoningData(zoning)
+        }
+        if (flu) {
+          setFLUData(flu)
+        }
+      } catch (err) {
+        console.error('Error loading planning data:', err)
+      }
+    }
+    
+    loadPlanningData()
   }, [])
 
   // Load user favorites for Citrus county
@@ -343,6 +377,104 @@ const CitrusMapPage = () => {
     }
   }, [parcelData, favorites])
 
+
+
+  // Function to create onEachFeature handler for zoning
+  const onEachZoningFeature = useCallback((feature, layer) => {
+    // Create popup content
+    const popupContent = `
+      <div class="p-3">
+        <h3 class="font-semibold text-sm text-gray-800 mb-2">Zoning Information</h3>
+        <div class="space-y-2 text-xs">
+          <div>
+            <span class="font-medium text-gray-600">Zone Type:</span>
+            <div class="text-gray-800 mt-1 p-2 bg-orange-50 rounded border text-sm">
+              ${feature.properties.descript || 'No description available'}
+            </div>
+          </div>
+          ${feature.properties.LANDUSE ? `
+            <div>
+              <span class="font-medium text-gray-600">Land Use Code:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.LANDUSE}</div>
+            </div>
+          ` : ''}
+          ${feature.properties.OBJECTID ? `
+            <div>
+              <span class="font-medium text-gray-600">Object ID:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.OBJECTID}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `
+    
+    // Bind popup to layer
+    layer.bindPopup(popupContent, {
+      maxWidth: 300,
+      className: 'custom-popup'
+    })
+    
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 2,
+        color: '#666666',
+        fillOpacity: 0.8
+      })
+    })
+    
+    layer.on('mouseout', () => {
+      layer.setStyle(getCitrusZoningStyle(feature))
+    })
+  }, [])
+
+  // Function to create onEachFeature handler for FLU
+  const onEachFLUFeature = useCallback((feature, layer) => {
+    // Create popup content
+    const popupContent = `
+      <div class="p-3">
+        <h3 class="font-semibold text-sm text-gray-800 mb-2">Future Land Use Information</h3>
+        <div class="space-y-2 text-xs">
+          <div>
+            <span class="font-medium text-gray-600">Future Use Type:</span>
+            <div class="text-gray-800 mt-1 p-2 bg-teal-50 rounded border text-sm">
+              ${feature.properties.descript || 'No description available'}
+            </div>
+          </div>
+          ${feature.properties.LANDUSE ? `
+            <div>
+              <span class="font-medium text-gray-600">Land Use Code:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.LANDUSE}</div>
+            </div>
+          ` : ''}
+          ${feature.properties.OBJECTID ? `
+            <div>
+              <span class="font-medium text-gray-600">Object ID:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.OBJECTID}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `
+    
+    // Bind popup to layer
+    layer.bindPopup(popupContent, {
+      maxWidth: 300,
+      className: 'custom-popup'
+    })
+    
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 2,
+        color: '#666666',
+        fillOpacity: 0.8
+      })
+    })
+    
+    layer.on('mouseout', () => {
+      layer.setStyle(getCitrusFLUStyle(feature))
+    })
+  }, [])
+
   // (Removed legacy duplicated zoomToParcelBounds fragment)
 
   // Handle map ready event
@@ -547,6 +679,28 @@ const CitrusMapPage = () => {
             />
           )}
 
+          {/* Zoning data layer */}
+          {showZoning && zoningData && (
+            <GeoJSON
+              key="citrus-zoning"
+              data={zoningData}
+              style={getCitrusZoningStyle}
+              onEachFeature={onEachZoningFeature}
+              pane="overlayPane"
+            />
+          )}
+
+          {/* Future Land Use data layer */}
+          {showFLU && fluData && (
+            <GeoJSON
+              key="citrus-flu"
+              data={fluData}
+              style={getCitrusFLUStyle}
+              onEachFeature={onEachFLUFeature}
+              pane="overlayPane"
+            />
+          )}
+
           {/* Debug center marker removed */}
         </MapContainer>
       </div>
@@ -559,6 +713,37 @@ const CitrusMapPage = () => {
         onToggleWetlands={() => setShowWetlands(!showWetlands)}
         showDevelopmentAreas={false}
         onToggleDevelopmentAreas={null}
+        // Planning layers
+        showZoning={showZoning}
+        onToggleZoning={async () => {
+          if (!showZoning) {
+            setZoningLoading(true)
+            // Small delay to show loading indicator before rendering
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+          setShowZoning(!showZoning)
+          if (!showZoning) {
+            // Reset loading after a short delay to allow rendering
+            setTimeout(() => setZoningLoading(false), 500)
+          }
+        }}
+        showFLU={showFLU}
+        onToggleFLU={async () => {
+          if (!showFLU) {
+            setFLULoading(true)
+            // Small delay to show loading indicator before rendering
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+          setShowFLU(!showFLU)
+          if (!showFLU) {
+            // Reset loading after a short delay to allow rendering
+            setTimeout(() => setFLULoading(false), 500)
+          }
+        }}
+        zoningLegend={zoningData ? getCitrusZoningLegend(zoningData) : []}
+        fluLegend={fluData ? getCitrusFLULegend(fluData) : []}
+        zoningLoading={zoningLoading}
+        fluLoading={fluLoading}
       />
 
       {/* Parcel Information Panel */}
@@ -572,6 +757,7 @@ const CitrusMapPage = () => {
           onToggleFavorite={toggleFavorite}
         />
       )}
+
     </div>
   )
 }
