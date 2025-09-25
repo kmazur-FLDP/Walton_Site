@@ -580,3 +580,99 @@ export const getHernandoFLULegend = (data) => {
     color: getHernandoFLUColor(label)
   }))
 }
+
+/**
+ * Polk County Future Land Use color mappings
+ */
+export const getPolkFLUColor = (fluName) => {
+  // Predefined colors for Polk County FLU categories (actual category names)
+  const colorMap = {
+    // Residential categories - blues/greens
+    'RL-1': '#3B82F6',          // Low Density Residential - Blue
+    'RL-2': '#2563EB',          // Low Density Residential 2 - Dark blue  
+    'RL-3': '#1E40AF',          // Low Density Residential 3 - Very dark blue
+    'RL-4': '#1D4ED8',          // Low Density Residential 4 - Navy blue
+    'RM': '#10B981',            // Medium Density Residential - Green
+    'RS': '#059669',            // Residential Single Family - Dark green
+    'RH': '#6366F1',            // High Density Residential - Indigo
+    'A/RR': '#22C55E',          // Agriculture/Rural Residential - Light green
+    
+    // Commercial categories - oranges/reds
+    'CC': '#EA580C',            // Community Commercial - Orange
+    'NAC': '#F97316',           // Neighborhood Activity Center - Light orange
+    'CAC': '#FB923C',           // Community Activity Center - Lighter orange
+    'RAC': '#DC2626',           // Regional Activity Center - Red
+    'TC': '#EF4444',            // Town Center - Light red
+    'TCC': '#F87171',           // Town Center Core - Lighter red
+    'CE': '#FB923C',            // Commercial Entertainment - Lighter orange
+    'OC': '#F59E0B',            // Office Commercial - Amber
+    
+    // Mixed use/Business categories - pinks
+    'BPC-1': '#F472B6',         // Business Park Commercial 1 - Pink
+    'BPC-2': '#EC4899',         // Business Park Commercial 2 - Dark pink
+    'RCC': '#BE185D',           // Regional City Center - Very dark pink
+    'RCC-R': '#DB2777',         // Regional City Center Residential - Medium pink
+    'CORE': '#A21CAF',          // Core Area - Dark pink
+    
+    // Industrial categories - grays
+    'IND': '#6B7280',           // Industrial - Gray
+    'LCC': '#9CA3AF',           // Light Commercial/Industrial - Light gray
+    'HIC': '#4B5563',           // Heavy Industrial Commercial - Dark gray
+    'PI': '#374151',            // Port Industrial - Very dark gray
+    'IAC': '#6B7280',           // Industrial Activity Center - Gray
+    
+    // Institutional/Public categories - purples
+    'INST-1': '#7C3AED',        // Institutional 1 - Violet
+    'INST-2': '#5B21B6',        // Institutional 2 - Dark purple
+    'PM': '#8B5CF6',            // Public/Municipal - Medium purple
+    
+    // Special/Other categories
+    'CITY': '#F59E0B',          // City - Amber
+    'PRESV': '#16A34A',         // Preservation - Forest green
+    'ROS': '#84CC16',           // Recreation/Open Space - Lime green
+    'LR': '#0891B2',            // Lakes/Recreation - Cyan
+    'EC': '#06B6D4',            // Environmental Conservation - Sky blue
+    'DRI': '#D97706',           // Development of Regional Impact - Dark amber
+    
+    // Default fallback color for any unmapped categories
+    'DEFAULT': '#9CA3AF'        // Light gray
+  }
+
+  return colorMap[fluName] || stringToColor(fluName)
+}
+
+/**
+ * Get GeoJSON style for Polk FLU layer
+ */
+export const getPolkFLUStyle = (feature) => {
+  const fluName = feature.properties?.FLUNAME || ''
+  const color = getPolkFLUColor(fluName)
+  
+  return {
+    fillColor: color,
+    weight: 1.5,
+    opacity: 0.8,
+    color: color,
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get unique categories and their colors for legend
+ */
+export const getPolkFLULegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const fluName = feature.properties?.FLUNAME
+    if (fluName && fluName.trim() !== '') {
+      categories.add(fluName)
+    }
+  })
+  
+  return Array.from(categories).sort().map(fluName => ({
+    label: fluName,
+    color: getPolkFLUColor(fluName)
+  }))
+}

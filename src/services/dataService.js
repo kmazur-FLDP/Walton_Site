@@ -309,7 +309,7 @@ class DataService {
   }
 
   /**
-   * Load Polk County Future Land Use (FLU) data
+   * Load Polk County Future Land Use (FLU) data (simplified version for performance)
    * @returns {Promise<Object|null>} GeoJSON FLU data
    */
   async loadPolkFLU() {
@@ -320,7 +320,7 @@ class DataService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/Polk_FLU.geojson`)
+      const response = await fetch(`${this.baseUrl}/Polk_FLU_Simplified.geojson`)
       
       if (!response.ok) {
         throw new Error(`Polk FLU not found (${response.status})`)

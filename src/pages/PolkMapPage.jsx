@@ -9,6 +9,7 @@ import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
 import FloodplainLayer from '../components/FloodplainLayer'
 import PrintButton from '../components/PrintButton'
+import { getPolkFLUStyle, getPolkFLULegend } from '../utils/colorMaps'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -95,12 +96,15 @@ const PolkMapPage = () => {
   const [loading, setLoading] = useState(true)
   const [parcelData, setParcelData] = useState(null)
   const [developmentData, setDevelopmentData] = useState(null)
+  const [fluData, setFluData] = useState(null)
+  const [fluLoading, setFluLoading] = useState(false)
   const [error, setError] = useState(null)
   const [parcelCount, setParcelCount] = useState(0)
   const [mapReady, setMapReady] = useState(false)
   const [computedCenter, setComputedCenter] = useState(null)
   const [showDevelopmentAreas, setShowDevelopmentAreas] = useState(false)
   const [showWetlands, setShowWetlands] = useState(false)
+  const [showFLU, setShowFLU] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
@@ -123,9 +127,9 @@ const PolkMapPage = () => {
         setLoading(true)
         setError(null)
 
-        console.log('Loading Polk parcel and development area data...')
+        console.log('Loading Polk parcel, development area, and FLU data...')
         
-        // Load both parcels and development areas in parallel
+        // Load parcels, development areas, and FLU in parallel
         const [parcels, devAreas] = await Promise.all([
           dataService.loadPolkParcels(),
           dataService.loadPolkDevelopmentAreas()
@@ -166,6 +170,42 @@ const PolkMapPage = () => {
     }
     loadMapData()
   }, [])
+
+  // Load FLU data on-demand (using simplified version for performance)
+  const loadFLUData = async () => {
+    if (fluData || fluLoading) return // Already loaded or loading
+    
+    try {
+      setFluLoading(true)
+      console.log('Loading simplified Polk FLU data...')
+      
+      const flu = await dataService.loadPolkFLU()
+      
+      if (flu) {
+        console.log('Loaded simplified Polk FLU:', flu.features?.length || 0, 'features')
+        console.log('Contains all major land use categories (only excludes water bodies)')
+        setFluData(flu)
+        setShowFLU(true) // Auto-enable the layer when loaded
+      } else {
+        console.warn('Failed to load Polk FLU data')
+      }
+    } catch (err) {
+      console.error('Error loading Polk FLU data:', err)
+    } finally {
+      setFluLoading(false)
+    }
+  }
+
+  // Handle FLU toggle - load data if needed when turning on
+  const handleFLUToggle = async () => {
+    if (!showFLU && !fluData && !fluLoading) {
+      // Turning on FLU layer and data not loaded - load it first
+      await loadFLUData()
+    } else {
+      // Just toggle the visibility
+      setShowFLU(!showFLU)
+    }
+  }
 
   // Load user favorites for Polk county
   useEffect(() => {
@@ -542,6 +582,27 @@ const PolkMapPage = () => {
     layer.bindPopup(popupContent)
   }
 
+  // FLU feature handler
+  const onEachFLUFeature = (feature, layer) => {
+    const props = feature.properties
+    
+    // Create popup content for FLU areas
+    const popupContent = `
+      <div class="p-3 min-w-64">
+        <h3 class="font-semibold text-base mb-2">Future Land Use</h3>
+        <div class="space-y-1 text-sm">
+          <div><span class="font-medium">FLU Name:</span> ${props.FLUNAME || 'N/A'}</div>
+          <div><span class="font-medium">FLU Code:</span> ${props.FLU_CODE || 'N/A'}</div>
+          <div><span class="font-medium">Object ID:</span> ${props.OBJECTID || 'N/A'}</div>
+          <div><span class="font-medium">Shape Length:</span> ${props.Shape_Length ? Number(props.Shape_Length).toFixed(2) + ' ft' : 'N/A'}</div>
+          <div><span class="font-medium">Shape Area:</span> ${props.Shape_Area ? Number(props.Shape_Area).toFixed(2) + ' sq ft' : 'N/A'}</div>
+        </div>
+      </div>
+    `
+    
+    layer.bindPopup(popupContent)
+  }
+
   // Clean up function to close info panel
   const handleCloseInfoPanel = () => {
     setShowInfoPanel(false)
@@ -683,6 +744,16 @@ const PolkMapPage = () => {
                 />
               )}
             </LayersControl.Overlay>
+            <LayersControl.Overlay name="Future Land Use (Simplified)" checked={showFLU}>
+              {fluData && (
+                <GeoJSON
+                  key="polk-flu"
+                  data={fluData}
+                  style={getPolkFLUStyle}
+                  onEachFeature={onEachFLUFeature}
+                />
+              )}
+            </LayersControl.Overlay>
             <LayersControl.Overlay name="NWI Wetlands">
               <TileLayer
                 url="https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/tile/{z}/{y}/{x}?f=png"
@@ -725,6 +796,10 @@ const PolkMapPage = () => {
         onToggleWetlands={() => setShowWetlands(!showWetlands)}
         showDevelopmentAreas={showDevelopmentAreas}
         onToggleDevelopmentAreas={() => setShowDevelopmentAreas(!showDevelopmentAreas)}
+        showFLU={showFLU}
+        onToggleFLU={handleFLUToggle}
+        fluLegend={fluData ? getPolkFLULegend(fluData) : []}
+        fluLoading={fluLoading}
       />
 
       {/* Parcel Information Panel */}
