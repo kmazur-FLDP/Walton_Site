@@ -397,3 +397,186 @@ export const getPascoFLULegend = (data) => {
     color: getPascoFLUColor(desc)
   }))
 }
+
+/**
+ * Hernando County Zoning color mappings
+ */
+export const getHernandoZoningColor = (zoneDesc) => {
+  // Predefined colors for major zoning categories
+  const colorMap = {
+    // Residential categories - blues/greens
+    'Residential Single Family Low Density': '#3B82F6',          // Blue
+    'Residential Single Family Medium Density': '#2563EB',       // Dark blue
+    'Residential Single Family High Density': '#1E40AF',         // Very dark blue
+    'Residential Multi-Family Low Density': '#10B981',           // Green
+    'Residential Multi-Family Medium Density': '#059669',        // Dark green
+    'Residential Multi-Family High Density': '#047857',          // Forest green
+    'Residential Estate': '#16A34A',                             // Forest green
+    'Residential Rural': '#22C55E',                              // Light green
+    'Residential Mobile Home': '#A855F7',                        // Purple
+    'Planned Unit Development': '#6366F1',                       // Indigo
+    'Traditional Neighborhood Development': '#8B5CF6',           // Light purple
+    
+    // Commercial categories - oranges/reds
+    'Commercial Neighborhood': '#EA580C',                        // Orange
+    'Commercial General': '#F97316',                             // Light orange
+    'Commercial Highway': '#FB923C',                             // Lighter orange
+    'Commercial Professional': '#EF4444',                        // Light red
+    'Commercial Tourist': '#F87171',                             // Lighter red
+    'Commercial Recreation': '#FCA5A5',                          // Very light red
+    'Mixed Use': '#F472B6',                                      // Pink
+    
+    // Industrial categories - grays
+    'Industrial Light': '#9CA3AF',                               // Light gray
+    'Industrial General': '#6B7280',                             // Gray
+    'Industrial Heavy': '#4B5563',                               // Dark gray
+    'Business Park': '#374151',                                  // Very dark gray
+    
+    // Agricultural/Rural categories - yellows/browns
+    'Agricultural': '#EAB308',                                   // Yellow
+    'Agricultural Intensive': '#FACC15',                         // Light yellow
+    'Forestry': '#F59E0B',                                       // Amber
+    'Rural Activity Center': '#D97706',                          // Dark amber
+    
+    // Special use categories - various
+    'Public/Semi-Public': '#7C3AED',                             // Violet
+    'Conservation': '#16A34A',                                   // Forest green
+    'Recreation': '#84CC16',                                     // Lime green
+    'Extractive': '#A3A3A3',                                     // Neutral gray
+    'Transportation': '#6D28D9',                                 // Medium purple
+    'Utilities': '#5B21B6',                                      // Dark purple
+    'Water': '#0891B2',                                          // Cyan
+    'Wellfield Protection': '#06B6D4',                           // Sky blue
+  }
+
+  return colorMap[zoneDesc] || stringToColor(zoneDesc)
+}
+
+/**
+ * Hernando County Future Land Use color mappings
+ */
+export const getHernandoFLUColor = (label) => {
+  // Predefined colors for major FLU categories
+  const colorMap = {
+    // Residential categories - blues/greens
+    'Low Density Residential': '#3B82F6',                        // Blue
+    'Medium Density Residential': '#2563EB',                     // Dark blue
+    'High Density Residential': '#1E40AF',                       // Very dark blue
+    'Estate Residential': '#10B981',                             // Green
+    'Rural Residential': '#059669',                              // Dark green
+    'Mobile Home Residential': '#A855F7',                        // Purple
+    'Planned Residential Development': '#6366F1',                // Indigo
+    'Traditional Neighborhood Development': '#8B5CF6',           // Light purple
+    
+    // Commercial categories - oranges/reds
+    'Neighborhood Commercial': '#EA580C',                        // Orange
+    'Community Commercial': '#F97316',                           // Light orange
+    'General Commercial': '#FB923C',                             // Lighter orange
+    'Highway Commercial': '#DC2626',                             // Red
+    'Tourist Commercial': '#EF4444',                             // Light red
+    'Professional Office': '#F87171',                            // Lighter red
+    'Recreation Commercial': '#FCA5A5',                          // Very light red
+    
+    // Mixed use categories
+    'Mixed Use': '#F472B6',                                      // Pink
+    'Mixed Use Development': '#EC4899',                          // Dark pink
+    'Town Center': '#BE185D',                                    // Very dark pink
+    
+    // Industrial categories - grays
+    'Light Industrial': '#9CA3AF',                               // Light gray
+    'General Industrial': '#6B7280',                             // Gray
+    'Heavy Industrial': '#4B5563',                               // Dark gray
+    'Business Park': '#374151',                                  // Very dark gray
+    
+    // Agricultural/Rural categories - yellows/browns
+    'Agriculture': '#EAB308',                                    // Yellow
+    'Agricultural Intensive': '#FACC15',                         // Light yellow
+    'Silviculture': '#F59E0B',                                   // Amber
+    'Rural Activity Center': '#D97706',                          // Dark amber
+    'Forestry': '#92400E',                                       // Brown
+    
+    // Special use categories
+    'Public/Semi-Public': '#7C3AED',                             // Violet
+    'Conservation': '#16A34A',                                   // Forest green
+    'Recreation': '#84CC16',                                     // Lime green
+    'Extractive': '#A3A3A3',                                     // Neutral gray
+    'Transportation': '#6D28D9',                                 // Medium purple
+    'Utilities': '#5B21B6',                                      // Dark purple
+    'Water': '#0891B2',                                          // Cyan
+    'Wellfield Protection': '#06B6D4',                           // Sky blue
+  }
+
+  return colorMap[label] || stringToColor(label)
+}
+
+/**
+ * Get GeoJSON style for Hernando Zoning layer
+ */
+export const getHernandoZoningStyle = (feature) => {
+  const zoneDesc = feature.properties?.ZONEDESC || ''
+  const color = getHernandoZoningColor(zoneDesc)
+  
+  return {
+    fillColor: color,
+    weight: 1.5,
+    opacity: 0.8,
+    color: color,
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get GeoJSON style for Hernando FLU layer
+ */
+export const getHernandoFLUStyle = (feature) => {
+  const label = feature.properties?.LABEL || ''
+  const color = getHernandoFLUColor(label)
+  
+  return {
+    fillColor: color,
+    weight: 1.5,
+    opacity: 0.8,
+    color: color,
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get unique categories and their colors for legend
+ */
+export const getHernandoZoningLegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const zoneDesc = feature.properties?.ZONEDESC
+    if (zoneDesc && zoneDesc.trim() !== '') {
+      categories.add(zoneDesc)
+    }
+  })
+  
+  return Array.from(categories).sort().map(zoneDesc => ({
+    label: zoneDesc,
+    color: getHernandoZoningColor(zoneDesc)
+  }))
+}
+
+/**
+ * Get unique categories and their colors for legend
+ */
+export const getHernandoFLULegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const label = feature.properties?.LABEL
+    if (label && label.trim() !== '') {
+      categories.add(label)
+    }
+  })
+  
+  return Array.from(categories).sort().map(label => ({
+    label: label,
+    color: getHernandoFLUColor(label)
+  }))
+}

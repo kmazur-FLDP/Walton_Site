@@ -37,6 +37,61 @@ class DataService {
   }
 
   /**
+   * Load Hernando County zoning data
+   * @returns {Promise<Object|null>} GeoJSON zoning data
+   */
+  async loadHernandoZoning() {
+    const cacheKey = 'hernando-zoning'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      // Use Supabase storage URL for large file
+      const response = await fetch('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson/Hernando_Zoning.geojson')
+      
+      if (!response.ok) {
+        throw new Error(`Hernando zoning not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Hernando zoning:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Hernando County Future Land Use (FLU) data
+   * @returns {Promise<Object|null>} GeoJSON FLU data
+   */
+  async loadHernandoFLU() {
+    const cacheKey = 'hernando-flu'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Hernando_FLU.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Hernando FLU not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Hernando FLU:', error)
+      return null
+    }
+  }
+
+  /**
    * Load Manatee County parcels
    * @returns {Promise<Object|null>} GeoJSON parcel data
    */
@@ -249,6 +304,33 @@ class DataService {
       return data
     } catch (error) {
       console.error('Error loading Polk parcels:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Polk County Future Land Use (FLU) data
+   * @returns {Promise<Object|null>} GeoJSON FLU data
+   */
+  async loadPolkFLU() {
+    const cacheKey = 'polk-flu'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Polk_FLU.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Polk FLU not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Polk FLU:', error)
       return null
     }
   }
