@@ -676,3 +676,199 @@ export const getPolkFLULegend = (data) => {
     color: getPolkFLUColor(fluName)
   }))
 }
+
+/**
+ * Manatee County Zoning color mappings
+ */
+export const getManateeZoningColor = (zonelabel) => {
+  // Predefined colors for common Manatee County zoning categories
+  const colorMap = {
+    // Planned Development categories - blues
+    'PD-R': '#3B82F6',          // Planned Development Residential - Blue
+    'PD-MU': '#F472B6',         // Planned Development Mixed Use - Pink
+    'PD-C': '#2563EB',          // Planned Development Commercial - Medium blue
+    'PD-I': '#6B7280',          // Planned Development Industrial - Gray
+    'PD-GC': '#60A5FA',         // Planned Development General Commercial - Light blue
+    'PD-O': '#1D4ED8',          // Planned Development Office - Navy blue
+    'PD-PI': '#4B5563',         // Planned Development Park Industrial - Dark gray
+    'PD-A': '#FBBF24',          // Planned Development Agricultural - Light yellow
+    'PD-UI': '#9CA3AF',         // Planned Development Urban Industrial - Light gray
+    'PD-W': '#06B6D4',          // Planned Development Water - Sky blue
+    'PD-RV': '#92400E',         // Planned Development RV - Brown
+    
+    // Residential categories - greens  
+    'RSF-1': '#22C55E',         // Residential Single Family 1 - Light green
+    'RSF-2': '#16A34A',         // Residential Single Family 2 - Green
+    'RSF-3': '#15803D',         // Residential Single Family 3 - Dark green
+    'RSF-4.5': '#10B981',       // Residential Single Family 4.5 - Green
+    'RSF-6': '#059669',         // Residential Single Family 6 - Dark green
+    'RMF-6': '#34D399',         // Residential Multi-family 6 - Light green
+    'RMF-9': '#6EE7B7',         // Residential Multi-family 9 - Very light green
+    'RMF-16': '#A7F3D0',        // Residential Multi-family 16 - Pale green
+    'RDD-3': '#047857',         // Rural Development District 3 - Very dark green
+    'RDD-4.5': '#065F46',       // Rural Development District 4.5 - Forest green
+    'RDD-6': '#064E3B',         // Rural Development District 6 - Very dark green
+    
+    // Agricultural categories - yellows/browns
+    'A': '#F59E0B',             // Agricultural - Amber
+    'A-1': '#EAB308',           // Agricultural 1 - Yellow
+    
+    // Commercial categories - oranges/reds
+    'GC': '#EA580C',            // General Commercial - Orange
+    'GC*': '#F97316',           // General Commercial Special - Light orange
+    'GC/L': '#FB923C',          // General Commercial Limited - Lighter orange
+    'NC-S': '#DC2626',          // Neighborhood Commercial Small - Red
+    'NC-M': '#EF4444',          // Neighborhood Commercial Medium - Light red
+    'HC': '#F87171',            // Highway Commercial - Lighter red
+    'HC/L': '#FCA5A5',          // Highway Commercial Limited - Very light red
+    
+    // Industrial categories - grays
+    'MP-I': '#374151',          // Master Planned Industrial - Very dark gray
+    
+    // Mixed Use/Special - pinks/purples
+    'VIL': '#EC4899',           // Village - Dark pink
+    'VIL/L': '#BE185D',         // Village Limited - Very dark pink
+    
+    // Conservation/Recreation - greens
+    'CON': '#16A34A',           // Conservation - Forest green
+    'R-OS': '#84CC16',          // Recreation Open Space - Lime green
+    'EX': '#A3A3A3',            // Extractive - Neutral gray
+    
+    // Water/Utilities - blues/purples  
+    'WTR': '#0891B2',           // Water - Cyan
+    
+    // Special categories
+    'CITY': '#F59E0B',          // City - Amber
+    'RVP': '#D97706'            // RV Park - Dark amber
+  }
+
+  return colorMap[zonelabel] || stringToColor(zonelabel)
+}
+
+/**
+ * Get GeoJSON style for Manatee Zoning layer
+ */
+export const getManateeZoningStyle = (feature) => {
+  const zonelabel = feature.properties?.ZONELABEL || ''
+  const color = getManateeZoningColor(zonelabel)
+  
+  return {
+    fillColor: color,
+    weight: 1,
+    opacity: 0.8,
+    color: '#000000',
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get unique zoning categories and their colors for legend
+ */
+export const getManateeZoningLegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const zonelabel = feature.properties?.ZONELABEL
+    if (zonelabel && zonelabel.trim() !== '') {
+      categories.add(zonelabel)
+    }
+  })
+  
+  return Array.from(categories).sort().map(zonelabel => ({
+    label: zonelabel,
+    color: getManateeZoningColor(zonelabel)
+  }))
+}
+
+/**
+ * Manatee County Future Land Use color mappings
+ */
+export const getManateeFLUColor = (flulabel) => {
+  // Predefined colors for Manatee County FLU categories
+  const colorMap = {
+    // Public/Semi-Public - purple variants
+    'P/SP-1': '#7C3AED',        // Public/Semi-Public 1 - Violet (203)
+    'P/SP-2': '#8B5CF6',        // Public/Semi-Public 2 - Light violet (8)
+    'P/SP-3': '#A78BFA',        // Public/Semi-Public 3 - Lighter violet
+    
+    // Residential categories - blue/green variants
+    'RES-1': '#22C55E',         // Residential 1 - Light green (24)
+    'RES-3': '#1E40AF',         // Residential 3 - Very dark blue (53)
+    'RES-6': '#3B82F6',         // Residential 6 - Blue (114)
+    'RES-9': '#2563EB',         // Residential 9 - Dark blue (54)
+    'RES-12': '#1D4ED8',        // Residential 12 - Navy blue (1)
+    'RES-16': '#1E3A8A',        // Residential 16 - Very dark blue (39)
+    
+    // Mixed Use categories - pink variants
+    'MU': '#F472B6',            // Mixed Use - Pink (30)
+    'MU-C/AC-1': '#EC4899',     // Mixed Use Commercial/Activity Center 1 - Dark pink (7)
+    'MU-C/AC-2': '#BE185D',     // Mixed Use Commercial/Activity Center 2 - Very dark pink (8)
+    'MU-C/AC-3': '#9D174D',     // Mixed Use Commercial/Activity Center 3 - Darkest pink (33)
+    'MU-C / R': '#F9A8D4',      // Mixed Use Commercial/Residential - Light pink (6)
+    'MU-C / RU': '#F0ABFC',     // Mixed Use Commercial/Rural - Very light pink (3)
+    
+    // Urban categories - yellow/orange variants
+    'UF-3': '#FCD34D',          // Urban Fringe 3 - Light yellow (33)
+    
+    // Office/Light Industrial - tan/brown variants
+    'OL': '#D4A574',            // Office Light - Tan (16)
+    'IL': '#6B7280',            // Industrial Light - Gray (47)
+    'IH': '#4B5563',            // Industrial Heavy - Dark gray (9)
+    'IU': '#374151',            // Industrial Urban - Very dark gray (5)
+    
+    // Environmental/Recreation - green variants
+    'CON': '#16A34A',           // Conservation - Forest green (111)
+    'R-OS': '#84CC16',          // Recreation Open Space - Lime green (60)
+    'ROR': '#22C55E',           // Rural Outdoor Recreation - Light green (86)
+    'ER': '#047857',            // Environmental Restoration - Very dark green (1)
+    
+    // Agricultural - yellow variants
+    'AG-R': '#EAB308',          // Agriculture Rural - Yellow (55)
+    
+    // Special categories
+    'CITY': '#F59E0B',          // City - Amber (171)
+    'EXT': '#A3A3A3',           // Extractive - Neutral gray
+    'TRAN': '#6D28D9',          // Transportation - Medium purple
+    'UTL': '#5B21B6',           // Utilities - Dark purple
+    'WTR': '#0891B2'            // Water - Cyan
+  }
+
+  return colorMap[flulabel] || stringToColor(flulabel)
+}
+
+/**
+ * Get GeoJSON style for Manatee FLU layer
+ */
+export const getManateeFLUStyle = (feature) => {
+  const flulabel = feature.properties?.FLULABEL || ''
+  const color = getManateeFLUColor(flulabel)
+  
+  return {
+    fillColor: color,
+    weight: 1,
+    opacity: 0.8,
+    color: '#000000',
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get unique FLU categories and their colors for legend
+ */
+export const getManateeFLULegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const flulabel = feature.properties?.FLULABEL
+    if (flulabel && flulabel.trim() !== '') {
+      categories.add(flulabel)
+    }
+  })
+  
+  return Array.from(categories).sort().map(flulabel => ({
+    label: flulabel,
+    color: getManateeFLUColor(flulabel)
+  }))
+}

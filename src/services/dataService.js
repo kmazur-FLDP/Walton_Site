@@ -390,6 +390,60 @@ class DataService {
   }
 
   /**
+   * Load Manatee County zoning data
+   * @returns {Promise<Object|null>} GeoJSON zoning data
+   */
+  async loadManateeZoning() {
+    const cacheKey = 'manatee-zoning'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Manatee_Zoning.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Manatee zoning not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Manatee zoning:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Manatee County Future Land Use (FLU) data
+   * @returns {Promise<Object|null>} GeoJSON FLU data
+   */
+  async loadManateeFLU() {
+    const cacheKey = 'manatee-flu'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Manatee_FLU.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Manatee FLU not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Manatee FLU:', error)
+      return null
+    }
+  }
+
+  /**
    * Get the bounds of a GeoJSON feature collection
    * @param {Object} geojson - GeoJSON data
    * @returns {Array|null} Bounds as [[south, west], [north, east]]

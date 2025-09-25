@@ -9,6 +9,7 @@ import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
 import FloodplainLayer from '../components/FloodplainLayer'
 import PrintButton from '../components/PrintButton'
+import { getManateeZoningStyle, getManateeZoningLegend, getManateeFLUStyle, getManateeFLULegend } from '../utils/colorMaps'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -97,6 +98,13 @@ const ManateeMapPage = () => {
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
+  // Zoning and FLU state
+  const [zoningData, setZoningData] = useState(null)
+  const [fluData, setFluData] = useState(null)
+  const [zoningLoading, setZoningLoading] = useState(false)
+  const [fluLoading, setFluLoading] = useState(false)
+  const [showZoning, setShowZoning] = useState(false)
+  const [showFLU, setShowFLU] = useState(false)
 
   // Load Manatee parcel and boundary data when component mounts
   useEffect(() => {
@@ -153,6 +161,76 @@ const ManateeMapPage = () => {
 
     loadFavorites()
   }, [])
+
+  // Load zoning data on-demand
+  const loadZoningData = async () => {
+    if (zoningData || zoningLoading) return // Already loaded or loading
+    
+    try {
+      setZoningLoading(true)
+      console.log('Loading Manatee zoning data...')
+      
+      const zoning = await dataService.loadManateeZoning()
+      
+      if (zoning) {
+        console.log('Loaded Manatee zoning:', zoning.features?.length || 0, 'features')
+        setZoningData(zoning)
+        setShowZoning(true) // Auto-enable the layer when loaded
+      } else {
+        console.warn('Failed to load Manatee zoning data')
+      }
+    } catch (err) {
+      console.error('Error loading Manatee zoning data:', err)
+    } finally {
+      setZoningLoading(false)
+    }
+  }
+
+  // Load FLU data on-demand
+  const loadFLUData = async () => {
+    if (fluData || fluLoading) return // Already loaded or loading
+    
+    try {
+      setFluLoading(true)
+      console.log('Loading Manatee FLU data...')
+      
+      const flu = await dataService.loadManateeFLU()
+      
+      if (flu) {
+        console.log('Loaded Manatee FLU:', flu.features?.length || 0, 'features')
+        setFluData(flu)
+        setShowFLU(true) // Auto-enable the layer when loaded
+      } else {
+        console.warn('Failed to load Manatee FLU data')
+      }
+    } catch (err) {
+      console.error('Error loading Manatee FLU data:', err)
+    } finally {
+      setFluLoading(false)
+    }
+  }
+
+  // Handle zoning toggle - load data if needed when turning on
+  const handleZoningToggle = async () => {
+    if (!showZoning && !zoningData && !zoningLoading) {
+      // Turning on zoning layer and data not loaded - load it first
+      await loadZoningData()
+    } else {
+      // Just toggle the visibility
+      setShowZoning(!showZoning)
+    }
+  }
+
+  // Handle FLU toggle - load data if needed when turning on
+  const handleFLUToggle = async () => {
+    if (!showFLU && !fluData && !fluLoading) {
+      // Turning on FLU layer and data not loaded - load it first
+      await loadFLUData()
+    } else {
+      // Just toggle the visibility
+      setShowFLU(!showFLU)
+    }
+  }
 
   // Handle URL parameter for parcel selection
   useEffect(() => {
@@ -496,6 +574,36 @@ const ManateeMapPage = () => {
     })
   }
 
+  // Click handler for zoning features
+  const onEachZoningFeature = (feature, layer) => {
+    const props = feature.properties
+    const zonelabel = props?.ZONELABEL || 'Unknown'
+    
+    layer.bindPopup(`
+      <div class="p-2">
+        <h3 class="font-bold text-lg mb-2">Manatee County Zoning</h3>
+        <p><strong>Zone:</strong> ${zonelabel}</p>
+        <p><strong>Name:</strong> ${props?.NAME || 'N/A'}</p>
+        <p><strong>Ordinance:</strong> ${props?.ORD_NO || 'N/A'}</p>
+      </div>
+    `)
+  }
+
+  // Click handler for FLU features  
+  const onEachFLUFeature = (feature, layer) => {
+    const props = feature.properties
+    const flulabel = props?.FLULABEL || 'Unknown'
+    
+    layer.bindPopup(`
+      <div class="p-2">
+        <h3 class="font-bold text-lg mb-2">Manatee County Future Land Use</h3>
+        <p><strong>FLU Category:</strong> ${flulabel}</p>
+        <p><strong>Type:</strong> ${props?.FLUTYPE || 'N/A'}</p>
+        <p><strong>Subtype:</strong> ${props?.FLUSUBTYPE || 'N/A'}</p>
+      </div>
+    `)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -638,6 +746,26 @@ const ManateeMapPage = () => {
               }}
             />
           )}
+
+          {/* Zoning layer */}
+          {showZoning && zoningData && (
+            <GeoJSON
+              key="manatee-zoning"
+              data={zoningData}
+              style={getManateeZoningStyle}
+              onEachFeature={onEachZoningFeature}
+            />
+          )}
+
+          {/* Future Land Use layer */}
+          {showFLU && fluData && (
+            <GeoJSON
+              key="manatee-flu"
+              data={fluData}
+              style={getManateeFLUStyle}
+              onEachFeature={onEachFLUFeature}
+            />
+          )}
         </MapContainer>
       </div>
 
@@ -649,6 +777,14 @@ const ManateeMapPage = () => {
         onToggleWetlands={() => setShowWetlands(!showWetlands)}
         showDevelopmentAreas={false}
         onToggleDevelopmentAreas={null}
+        showZoning={showZoning}
+        onToggleZoning={handleZoningToggle}
+        zoningLegend={zoningData ? getManateeZoningLegend(zoningData) : []}
+        zoningLoading={zoningLoading}
+        showFLU={showFLU}
+        onToggleFLU={handleFLUToggle}
+        fluLegend={fluData ? getManateeFLULegend(fluData) : []}
+        fluLoading={fluLoading}
       />
 
       {/* Parcel Information Panel */}
