@@ -323,13 +323,11 @@ const AdminDashboard = () => {
         })
         setShowCreateUserModal(false)
         
-        alert('User created successfully!')
-      } else {
-        alert('Failed to create user. Please try again.')
+        alert('User created successfully! They can now log in with their email and password.')
       }
     } catch (error) {
       console.error('Error creating user:', error)
-      alert('Failed to create user. Please check the details and try again.')
+      alert('Failed to create user: ' + (error.message || 'Please check the details and try again.'))
     } finally {
       setCreateUserLoading(false)
     }

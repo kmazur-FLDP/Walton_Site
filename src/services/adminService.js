@@ -475,44 +475,100 @@ class AdminService {
 
       const { email, password, full_name, role = 'user' } = userData
 
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Since we don't have admin API access, we need to use the regular signup
+      // But we need to make sure the user is created with admin privileges
+      
+      // First, check if user already exists
+      const { data: existingUsers } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email)
+        .limit(1)
+
+      if (existingUsers && existingUsers.length > 0) {
+        throw new Error('User with this email already exists')
+      }
+
+      // Use regular signup - this will create the auth user and trigger our database trigger
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
-          full_name
+        options: {
+          data: {
+            full_name: full_name,
+            admin_created: true, // Flag to indicate this was created by admin
+            role: role
+          }
         }
       })
 
-      if (authError) {
-        console.error('Auth error:', authError)
-        throw authError
+      if (signUpError) {
+        console.error('Sign up error:', signUpError)
+        throw signUpError
       }
 
-      // Create profile record
-      const { error: profileError } = await supabase
+      if (!signUpData.user) {
+        throw new Error('User creation failed - no user data returned')
+      }
+
+      // Update the profile with admin-specified role and full name
+      // Wait a moment for the profile to be created by trigger
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      const { error: updateError } = await supabase
         .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email,
-          full_name,
-          role,
-          created_at: new Date().toISOString(),
+        .update({
+          role: role,
+          full_name: full_name || '',
           updated_at: new Date().toISOString()
         })
+        .eq('id', signUpData.user.id)
 
-      if (profileError) {
-        console.error('Profile error:', profileError)
-        // If profile creation fails, we should clean up the auth user
-        await supabase.auth.admin.deleteUser(authData.user.id)
-        throw profileError
+      if (updateError) {
+        console.error('Profile update error:', updateError)
+        // Try to query the profile to see if it exists
+        const { data: profileCheck } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', signUpData.user.id)
+          .single()
+        
+        console.log('Profile check after creation:', profileCheck)
+        
+        if (!profileCheck) {
+          // Profile wasn't created by trigger, create it manually
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: signUpData.user.id,
+              email: email,
+              full_name: full_name || '',
+              role: role,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+          
+          if (insertError) {
+            console.error('Profile insert error:', insertError)
+            throw new Error('Failed to create user profile: ' + insertError.message)
+          }
+        }
       }
 
       return true
     } catch (error) {
       console.error('Error creating user:', error)
-      return false
+      
+      // Provide more specific error messages
+      if (error.message?.includes('already exists')) {
+        throw error
+      } else if (error.message?.includes('email')) {
+        throw new Error('Invalid email address')
+      } else if (error.message?.includes('password')) {
+        throw new Error('Password must be at least 6 characters long')
+      } else {
+        throw new Error('Failed to create user: ' + (error.message || 'Unknown error'))
+      }
     }
   }
 
