@@ -1,0 +1,41 @@
+{
+  "data_sources": {
+    "large_files": {
+      "base_url": "https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson",
+      "files": {
+        "Citrus_Zoning.geojson": {
+          "url": "https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson/Citrus_Zoning.geojson",
+          "size": "209MB",
+          "description": "Citrus County Zoning data"
+        },
+        "Citrus_FLU.geojson": {
+          "url": "https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson/Citrus_FLU.geojson", 
+          "size": "206MB",
+          "description": "Citrus County Future Land Use data"
+        },
+        "Hernando_Zoning.geojson": {
+          "url": "https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson/Hernando_Zoning.geojson",
+          "size": "246MB", 
+          "description": "Hernando County Zoning data"
+        }
+      }
+    },
+    "local_files": {
+      "base_path": "public/data/",
+      "files": {
+        "Citrus_Parcels.geojson": "public/data/Citrus_Parcels.geojson",
+        "Hernando_FLU.geojson": "public/data/Hernando_FLU.geojson",
+        "Hernando_Parcels.geojson": "public/data/Hernando_Parcels.geojson",
+        "Manatee_FLU.geojson": "public/data/Manatee_FLU.geojson",
+        "Manatee_Parcels.geojson": "public/data/Manatee_Parcels.geojson",
+        "Manatee_Zoning.geojson": "public/data/Manatee_Zoning.geojson",
+        "Pasco_FLU.geojson": "public/data/Pasco_FLU.geojson",
+        "Pasco_Parcels.geojson": "public/data/Pasco_Parcels.geojson",
+        "Pasco_Zoning.geojson": "public/data/Pasco_Zoning.geojson",
+        "Polk_Development_Areas.geojson": "public/data/Polk_Development_Areas.geojson",
+        "Polk_FLU.geojson": "public/data/Polk_FLU.geojson",
+        "Polk_Parcels.json": "public/data/Polk_Parcels.json"
+      }
+    }
+  }
+}

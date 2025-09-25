@@ -101,7 +101,8 @@ class DataService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/Citrus_Zoning.geojson`)
+      // Use Supabase storage URL for large file
+      const response = await fetch('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson/Citrus_Zoning.geojson')
       
       if (!response.ok) {
         throw new Error(`Citrus zoning not found (${response.status})`)
@@ -128,7 +129,8 @@ class DataService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/Citrus_FLU.geojson`)
+      // Use Supabase storage URL for large file
+      const response = await fetch('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/geojson/Citrus_FLU.geojson')
       
       if (!response.ok) {
         throw new Error(`Citrus FLU not found (${response.status})`)
