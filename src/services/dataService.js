@@ -173,6 +173,60 @@ class DataService {
   }
 
   /**
+   * Load Pasco County zoning data
+   * @returns {Promise<Object|null>} GeoJSON zoning data
+   */
+  async loadPascoZoning() {
+    const cacheKey = 'pasco-zoning'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Pasco_Zoning.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Pasco zoning not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Pasco zoning:', error)
+      return null
+    }
+  }
+
+  /**
+   * Load Pasco County Future Land Use (FLU) data
+   * @returns {Promise<Object|null>} GeoJSON FLU data
+   */
+  async loadPascoFLU() {
+    const cacheKey = 'pasco-flu'
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/Pasco_FLU.geojson`)
+      
+      if (!response.ok) {
+        throw new Error(`Pasco FLU not found (${response.status})`)
+      }
+      
+      const data = await response.json()
+      this.cache.set(cacheKey, data)
+      return data
+    } catch (error) {
+      console.error('Error loading Pasco FLU:', error)
+      return null
+    }
+  }
+
+  /**
    * Load Polk County parcels
    * @returns {Promise<Object|null>} GeoJSON parcel data
    */

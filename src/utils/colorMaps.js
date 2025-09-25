@@ -211,3 +211,189 @@ export const getCitrusFLULegend = (data) => {
     color: getCitrusFLUColor(desc)
   }))
 }
+
+/**
+ * Pasco County Zoning color mappings
+ */
+export const getPascoZoningColor = (znType) => {
+  // Predefined colors for major zoning categories
+  const colorMap = {
+    // Residential categories - blues/greens
+    'RSF-1': '#3B82F6',       // Single Family Residential - Blue
+    'RSF-2': '#60A5FA',       // Single Family Residential - Light blue
+    'RSF-3': '#2563EB',       // Single Family Residential - Dark blue
+    'RSF-4': '#1E40AF',       // Single Family Residential - Very dark blue
+    'RSF-5': '#1D4ED8',       // Single Family Residential - Medium blue
+    'RTH': '#10B981',         // Townhouse Residential - Green
+    'RMF-1': '#34D399',       // Multi-Family Residential - Light green
+    'RMF-2': '#059669',       // Multi-Family Residential - Dark green
+    'RMF-3': '#047857',       // Multi-Family Residential - Forest green
+    'RMH': '#A855F7',         // Mobile Home - Purple
+    'PUD': '#6366F1',         // Planned Unit Development - Indigo
+    'RR': '#16A34A',          // Rural Residential - Forest green
+    
+    // Commercial categories - oranges/reds
+    'C-1': '#EA580C',         // Neighborhood Commercial - Orange
+    'C-2': '#F97316',         // General Commercial - Light orange
+    'C-3': '#FB923C',         // Highway Commercial - Lighter orange
+    'C-4': '#DC2626',         // Service Commercial - Red
+    'C-5': '#EF4444',         // Professional Office - Light red
+    'CC': '#F87171',          // Community Commercial - Lighter red
+    'TC': '#FCA5A5',          // Tourist Commercial - Very light red
+    
+    // Industrial categories - grays/browns
+    'I-1': '#6B7280',         // Light Industrial - Gray
+    'I-2': '#4B5563',         // General Industrial - Dark gray
+    'I-3': '#374151',         // Heavy Industrial - Very dark gray
+    'BP': '#9CA3AF',          // Business Park - Light gray
+    
+    // Agricultural/Rural categories - yellows/browns
+    'A-1': '#EAB308',         // Agricultural - Yellow
+    'A-2': '#FACC15',         // Agricultural Intensive - Light yellow
+    'AR': '#F59E0B',          // Agricultural Residential - Amber
+    
+    // Special use categories - various
+    'PF': '#7C3AED',          // Public Facilities - Violet
+    'CON': '#16A34A',         // Conservation - Forest green
+    'REC': '#84CC16',         // Recreation - Lime green
+    'EX': '#A3A3A3',          // Extractive - Neutral gray
+    'T': '#6D28D9',           // Transportation - Medium purple
+    'W': '#0891B2',           // Water - Cyan
+    'RV': '#A3E635',          // Recreational Vehicle - Light lime
+    
+    // Mixed use categories
+    'MU': '#F472B6',          // Mixed Use - Pink
+    'MUD': '#EC4899',         // Mixed Use Development - Dark pink
+    'DRI': '#BE185D',         // Development of Regional Impact - Very dark pink
+  }
+
+  return colorMap[znType] || stringToColor(znType)
+}
+
+/**
+ * Pasco County Future Land Use color mappings
+ */
+export const getPascoFLUColor = (description) => {
+  // Predefined colors for major FLU categories
+  const colorMap = {
+    // Residential categories - blues/greens
+    'Low Density Residential': '#3B82F6',           // Blue
+    'Medium Density Residential': '#2563EB',        // Dark blue
+    'High Density Residential': '#1E40AF',          // Very dark blue
+    'Rural Residential': '#10B981',                 // Green
+    'Estate Residential': '#059669',                // Dark green
+    'Mobile Home Residential': '#A855F7',           // Purple
+    'Planned Residential Development': '#6366F1',   // Indigo
+    
+    // Commercial categories - oranges/reds
+    'Neighborhood Commercial': '#EA580C',           // Orange
+    'Community Commercial': '#F97316',              // Light orange
+    'General Commercial': '#FB923C',                // Lighter orange
+    'Highway Commercial': '#DC2626',                // Red
+    'Tourist Commercial': '#EF4444',                // Light red
+    'Professional Office': '#F87171',               // Lighter red
+    'Service Commercial': '#FCA5A5',                // Very light red
+    
+    // Industrial categories - grays
+    'Light Industrial': '#9CA3AF',                  // Light gray
+    'General Industrial': '#6B7280',                // Gray
+    'Heavy Industrial': '#4B5563',                  // Dark gray
+    'Business Park': '#374151',                     // Very dark gray
+    
+    // Mixed use categories
+    'Mixed Use': '#F472B6',                         // Pink
+    'Mixed Use Development': '#EC4899',             // Dark pink
+    'Town Center': '#BE185D',                       // Very dark pink
+    
+    // Agricultural/Rural categories - yellows/browns
+    'Agriculture': '#EAB308',                       // Yellow
+    'Agricultural Residential': '#FACC15',          // Light yellow
+    'Silviculture': '#F59E0B',                      // Amber
+    'Rural Activity Center': '#D97706',             // Dark amber
+    
+    // Special use categories
+    'Public Facilities': '#7C3AED',                 // Violet
+    'Conservation': '#16A34A',                      // Forest green
+    'Recreation': '#84CC16',                        // Lime green
+    'Extractive': '#A3A3A3',                        // Neutral gray
+    'Transportation': '#6D28D9',                    // Medium purple
+    'Water': '#0891B2',                             // Cyan
+    'Wellfield Protection': '#06B6D4',              // Sky blue
+    'Airport': '#5B21B6',                           // Dark purple
+    'Port District': '#4C1D95',                     // Very dark purple
+  }
+
+  return colorMap[description] || stringToColor(description)
+}
+
+/**
+ * Get GeoJSON style for Pasco Zoning layer
+ */
+export const getPascoZoningStyle = (feature) => {
+  const znType = feature.properties?.ZN_TYPE || ''
+  const color = getPascoZoningColor(znType)
+  
+  return {
+    fillColor: color,
+    weight: 1.5,
+    opacity: 0.8,
+    color: color,
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get GeoJSON style for Pasco FLU layer
+ */
+export const getPascoFLUStyle = (feature) => {
+  const description = feature.properties?.DESCRIPTION || ''
+  const color = getPascoFLUColor(description)
+  
+  return {
+    fillColor: color,
+    weight: 1.5,
+    opacity: 0.8,
+    color: color,
+    fillOpacity: 0.6
+  }
+}
+
+/**
+ * Get unique categories and their colors for legend
+ */
+export const getPascoZoningLegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const znType = feature.properties?.ZN_TYPE
+    if (znType && znType.trim() !== '') {
+      categories.add(znType)
+    }
+  })
+  
+  return Array.from(categories).sort().map(znType => ({
+    label: znType,
+    color: getPascoZoningColor(znType)
+  }))
+}
+
+/**
+ * Get unique categories and their colors for legend
+ */
+export const getPascoFLULegend = (data) => {
+  if (!data || !data.features) return []
+  
+  const categories = new Set()
+  data.features.forEach(feature => {
+    const desc = feature.properties?.DESCRIPTION
+    if (desc && desc.trim() !== '') {
+      categories.add(desc)
+    }
+  })
+  
+  return Array.from(categories).sort().map(desc => ({
+    label: desc,
+    color: getPascoFLUColor(desc)
+  }))
+}

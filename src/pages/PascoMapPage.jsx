@@ -10,6 +10,7 @@ import ParcelInfoPanel from '../components/ParcelInfoPanel'
 import MapLegend from '../components/MapLegend'
 import FloodplainLayer from '../components/FloodplainLayer'
 import PrintButton from '../components/PrintButton'
+import { getPascoZoningStyle, getPascoFLUStyle, getPascoZoningLegend, getPascoFLULegend } from '../utils/colorMaps'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -95,6 +96,14 @@ const PascoMapPage = () => {
   const [wetlandsLayer, setWetlandsLayer] = useState(null)
   const [showFloodplain, setShowFloodplain] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
+  
+  // Planning layer states
+  const [zoningData, setZoningData] = useState(null)
+  const [fluData, setFLUData] = useState(null)
+  const [showZoning, setShowZoning] = useState(false)
+  const [showFLU, setShowFLU] = useState(false)
+  const [isZoningLoading, setIsZoningLoading] = useState(false)
+  const [isFLULoading, setIsFLULoading] = useState(false)
 
   // Load Pasco parcel data when component mounts
   useEffect(() => {
@@ -125,6 +134,29 @@ const PascoMapPage = () => {
       }
     }
     loadMapData()
+  }, [])
+
+  // Load planning data (zoning and FLU) when component mounts
+  useEffect(() => {
+    const loadPlanningData = async () => {
+      try {
+        const [zoning, flu] = await Promise.all([
+          dataService.loadPascoZoning(),
+          dataService.loadPascoFLU()
+        ])
+        
+        if (zoning) {
+          setZoningData(zoning)
+        }
+        if (flu) {
+          setFLUData(flu)
+        }
+      } catch (err) {
+        console.error('Error loading planning data:', err)
+      }
+    }
+    
+    loadPlanningData()
   }, [])
 
   // Load user favorites for Pasco county
@@ -440,6 +472,102 @@ const PascoMapPage = () => {
     }
   }, [parcelData, favorites])
 
+  // Function to create onEachFeature handler for zoning
+  const onEachZoningFeature = useCallback((feature, layer) => {
+    // Create popup content
+    const popupContent = `
+      <div class="p-3">
+        <h3 class="font-semibold text-sm text-gray-800 mb-2">Zoning Information</h3>
+        <div class="space-y-2 text-xs">
+          <div>
+            <span class="font-medium text-gray-600">Zone Type:</span>
+            <div class="text-gray-800 mt-1 p-2 bg-orange-50 rounded border text-sm">
+              ${feature.properties.ZN_TYPE || 'No zoning type available'}
+            </div>
+          </div>
+          ${feature.properties.ZN_DESCR ? `
+            <div>
+              <span class="font-medium text-gray-600">Description:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.ZN_DESCR}</div>
+            </div>
+          ` : ''}
+          ${feature.properties.OBJECTID ? `
+            <div>
+              <span class="font-medium text-gray-600">Object ID:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.OBJECTID}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `
+    
+    // Bind popup to layer
+    layer.bindPopup(popupContent, {
+      maxWidth: 300,
+      className: 'custom-popup'
+    })
+    
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 2,
+        color: '#666666',
+        fillOpacity: 0.8
+      })
+    })
+    
+    layer.on('mouseout', () => {
+      layer.setStyle(getPascoZoningStyle(feature))
+    })
+  }, [])
+
+  // Function to create onEachFeature handler for FLU
+  const onEachFLUFeature = useCallback((feature, layer) => {
+    // Create popup content
+    const popupContent = `
+      <div class="p-3">
+        <h3 class="font-semibold text-sm text-gray-800 mb-2">Future Land Use Information</h3>
+        <div class="space-y-2 text-xs">
+          <div>
+            <span class="font-medium text-gray-600">Future Use Type:</span>
+            <div class="text-gray-800 mt-1 p-2 bg-teal-50 rounded border text-sm">
+              ${feature.properties.DESCRIPTION || 'No description available'}
+            </div>
+          </div>
+          ${feature.properties.FLU_DESCR ? `
+            <div>
+              <span class="font-medium text-gray-600">FLU Description:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.FLU_DESCR}</div>
+            </div>
+          ` : ''}
+          ${feature.properties.OBJECTID ? `
+            <div>
+              <span class="font-medium text-gray-600">Object ID:</span>
+              <div class="text-gray-800 mt-1">${feature.properties.OBJECTID}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `
+    
+    // Bind popup to layer
+    layer.bindPopup(popupContent, {
+      maxWidth: 300,
+      className: 'custom-popup'
+    })
+    
+    layer.on('mouseover', () => {
+      layer.setStyle({
+        weight: 2,
+        color: '#666666',
+        fillOpacity: 0.8
+      })
+    })
+    
+    layer.on('mouseout', () => {
+      layer.setStyle(getPascoFLUStyle(feature))
+    })
+  }, [])
+
   // Handle map ready event
   const handleMapReady = (map) => {
     console.log('Map is ready')
@@ -669,6 +797,28 @@ const PascoMapPage = () => {
             />
           )}
 
+          {/* Zoning data layer */}
+          {showZoning && zoningData && (
+            <GeoJSON
+              key="pasco-zoning"
+              data={zoningData}
+              style={getPascoZoningStyle}
+              onEachFeature={onEachZoningFeature}
+              pane="overlayPane"
+            />
+          )}
+
+          {/* Future Land Use data layer */}
+          {showFLU && fluData && (
+            <GeoJSON
+              key="pasco-flu"
+              data={fluData}
+              style={getPascoFLUStyle}
+              onEachFeature={onEachFLUFeature}
+              pane="overlayPane"
+            />
+          )}
+
           {/* Debug center marker removed */}
         </MapContainer>
       </div>
@@ -681,6 +831,14 @@ const PascoMapPage = () => {
         onToggleWetlands={() => setShowWetlands(!showWetlands)}
         showDevelopmentAreas={false}
         onToggleDevelopmentAreas={null}
+        showZoning={showZoning}
+        onToggleZoning={() => setShowZoning(!showZoning)}
+        showFLU={showFLU}
+        onToggleFLU={() => setShowFLU(!showFLU)}
+        isZoningLoading={isZoningLoading}
+        isFLULoading={isFLULoading}
+        zoningLegend={zoningData ? getPascoZoningLegend(zoningData) : []}
+        fluLegend={fluData ? getPascoFLULegend(fluData) : []}
       />
 
       {/* Parcel Information Panel */}
