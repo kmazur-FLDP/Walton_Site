@@ -212,12 +212,9 @@ const PolkMapPage = () => {
   useEffect(() => {
     const loadFavorites = async () => {
       try {
-        console.log('Loading Polk favorites...')
         const userFavorites = await favoritesService.getFavoritesByCounty('Polk')
         const favoriteIds = new Set(userFavorites.map(fav => fav.parcel_id))
         setFavorites(favoriteIds)
-        console.log('Loaded favorites:', favoriteIds.size)
-        console.log('Polk favorite parcel IDs:', Array.from(favoriteIds), 'data types:', Array.from(favoriteIds).map(id => typeof id))
       } catch (err) {
         console.error('Error loading favorites:', err)
       }
@@ -535,34 +532,22 @@ const PolkMapPage = () => {
     const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
     
     // Debug logging for first few parcels to check styling
-    if (Math.random() < 0.001) { // Log 0.1% of parcels to avoid spam
-      console.log('PolkMapPage parcelStyle debug:', {
-        parcelId,
-        parcelIdType: typeof parcelId,
-        isSelected,
-        isFavorite,
-        favoriteIds: Array.from(favorites).slice(0, 5), // Show first 5 favorites
-        favoriteIdsTypes: Array.from(favorites).slice(0, 5).map(id => typeof id),
-        favoritesSize: favorites.size
-      });
-    }
     
     if (isInMultiSelect) {
       return {
-        fillColor: '#f59e0b', // Amber/orange for multi-selected parcels
-        weight: 3,
+        fillColor: '#ff4500', // Bright red-orange (OrangeRed) - HIGHLY visible against yellow
+        weight: 4,
         opacity: 1,
-        color: '#d97706',
-        fillOpacity: 0.5
+        color: '#cc3700', // Dark red-orange border
+        fillOpacity: 0.7 // High opacity for strong visibility
       };
     } else if (isFavorite) {
-      console.log('🔴 RED PARCEL:', parcelId, typeof parcelId, 'matches favorite in set'); // Log every favorite parcel
       return {
-        fillColor: '#dc2626', // Bright red for favorites - highly visible against yellow
-        weight: 5,
+        fillColor: '#06b6d4', // Bright cyan - maximum contrast with yellow
+        weight: 6,
         opacity: 1,
-        color: '#7f1d1d', // Dark red border for strong contrast
-        fillOpacity: 0.75 // Very high opacity - almost solid
+        color: '#0e7490', // Dark cyan border
+        fillOpacity: 0.85 // Very high opacity - nearly solid
       };
     } else if (isSelected) {
       return {
