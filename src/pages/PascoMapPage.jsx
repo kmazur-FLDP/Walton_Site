@@ -671,7 +671,7 @@ const PascoMapPage = () => {
         weight: 3,
         opacity: 1,
         color: '#1d4ed8',
-        fillOpacity: 0.3
+        fillOpacity: 0.4 // Increased from 0.3 to 0.4 for better visibility
       };
     } else if (isSelected) {
       return {

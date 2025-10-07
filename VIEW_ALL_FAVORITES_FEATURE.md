@@ -15,9 +15,9 @@ This feature allows administrators to view all favorited parcels for a specific 
 Updated map pages now support viewing multiple parcels at once:
 - **Manatee County** ✅ Updated
 - **Pasco County** ✅ Updated
-- **Polk County** ⏳ Needs update
-- **Hernando County** ⏳ Needs update  
-- **Citrus County** ⏳ Needs update
+- **Polk County** ✅ Updated
+- **Hernando County** ✅ Updated
+- **Citrus County** ✅ Updated
 
 ## How to Use
 
@@ -30,10 +30,10 @@ Updated map pages now support viewing multiple parcels at once:
 6. A badge shows: "Viewing X parcels"
 
 ### Visual Indicators on Map:
-- **Amber/Orange** (🟠): Multi-selected parcels (viewing multiple favorites)
-- **Blue** (🔵): Individual favorite parcels
-- **Green** (🟢): Currently selected parcel (clicked)
-- **Yellow** (🟡): Default parcels
+- **Amber/Orange** (🟠): Multi-selected parcels (viewing multiple favorites) - `fillOpacity: 0.5`
+- **Blue** (🔵): Individual favorite parcels - `fillOpacity: 0.4` (increased for better visibility)
+- **Green** (🟢): Currently selected parcel (clicked) - `fillOpacity: 0.4`
+- **Yellow** (🟡): Default parcels - `fillOpacity: 0.15`
 
 ## Technical Details
 
@@ -43,8 +43,11 @@ Updated map pages now support viewing multiple parcels at once:
 
 ### Implementation Files
 - `src/pages/AdminDashboard.jsx`: Added "View All on Map" button
-- `src/pages/ManateeMapPage.jsx`: Added multi-parcel support
-- `src/pages/PascoMapPage.jsx`: Added multi-parcel support
+- `src/pages/ManateeMapPage.jsx`: Added multi-parcel support + increased favorite opacity
+- `src/pages/PascoMapPage.jsx`: Added multi-parcel support + increased favorite opacity
+- `src/pages/PolkMapPage.jsx`: Added multi-parcel support + increased favorite opacity
+- `src/pages/HernandoMapPage.jsx`: Added multi-parcel support + increased favorite opacity
+- `src/pages/CitrusMapPage.jsx`: Added multi-parcel support + increased favorite opacity
 
 ### State Management
 Each map page now has:
@@ -56,16 +59,14 @@ This tracks all parcels that should be highlighted when viewing multiple favorit
 
 ## Next Steps
 
-To complete this feature for all counties, the following map pages need the same updates:
-1. **PolkMapPage.jsx**
-2. **HernandoMapPage.jsx**
-3. **CitrusMapPage.jsx**
+✅ **All counties are now complete!** The feature is ready to use across:
+- Manatee County
+- Pasco County  
+- Polk County
+- Hernando County
+- Citrus County
 
-Each needs:
-1. Add `selectedParcels` state variable
-2. Update URL parameter handling to support `parcels` (comma-separated)
-3. Update `parcelStyle` function to check `isInMultiSelect`
-4. Add UI badge showing count of parcels being viewed
+No additional updates needed. Just test and enjoy!
 
 ## Benefits
 - **Faster Analysis**: View all favorites for a county at once
