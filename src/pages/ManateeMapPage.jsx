@@ -86,6 +86,7 @@ const ManateeMapPage = () => {
   const mapRef = useRef()
   const [favorites, setFavorites] = useState(new Set())
   const [selectedParcel, setSelectedParcel] = useState(null)
+  const [selectedParcels, setSelectedParcels] = useState(new Set()) // For viewing multiple parcels
   const [loading, setLoading] = useState(true)
   const [parcelData, setParcelData] = useState(null)
   const [boundaryData, setBoundaryData] = useState(null)
@@ -232,11 +233,64 @@ const ManateeMapPage = () => {
     }
   }
 
-  // Handle URL parameter for parcel selection
+  // Handle URL parameter for parcel selection (single or multiple)
   useEffect(() => {
     const parcelParam = searchParams.get('parcel')
-    if (parcelParam && parcelData) {
-      // Find the parcel in the data - Manatee uses different property names
+    const parcelsParam = searchParams.get('parcels')
+    
+    if (parcelsParam && parcelData) {
+      // Handle multiple parcels
+      const parcelIds = parcelsParam.split(',').map(id => id.trim())
+      console.log('Loading multiple parcels:', parcelIds)
+      
+      const matchedParcels = []
+      const parcelSet = new Set()
+      
+      parcelIds.forEach(parcelId => {
+        const parcel = parcelData.features.find(feature => 
+          feature.properties.PARCEL_UID === parcelId ||
+          feature.properties.PARCEL_ID === parcelId ||
+          feature.properties.PARCELLNO === parcelId ||
+          String(feature.properties.PARCEL_UID) === String(parcelId) ||
+          String(feature.properties.PARCEL_ID) === String(parcelId) ||
+          String(feature.properties.PARCELLNO) === String(parcelId)
+        )
+        
+        if (parcel) {
+          const id = parcel.properties.PARCELLNO || parcel.properties.PARCEL_UID || parcel.properties.PARCEL_ID
+          parcelSet.add(id)
+          matchedParcels.push(parcel)
+        }
+      })
+      
+      if (matchedParcels.length > 0) {
+        setSelectedParcels(parcelSet)
+        console.log(`Found ${matchedParcels.length} of ${parcelIds.length} requested parcels`)
+        
+        // Zoom to show all matched parcels
+        if (mapRef.current) {
+          try {
+            const allGeometries = {
+              type: 'FeatureCollection',
+              features: matchedParcels
+            }
+            const bounds = L.geoJSON(allGeometries).getBounds()
+            mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+          } catch (err) {
+            console.error('Error zooming to parcels:', err)
+          }
+        }
+      } else {
+        console.warn('No matching parcels found')
+      }
+      
+      // Clear the URL parameter to avoid re-triggering
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.delete('parcels')
+      navigate({ search: newSearchParams.toString() }, { replace: true })
+      
+    } else if (parcelParam && parcelData) {
+      // Handle single parcel (existing logic)
       const parcel = parcelData.features.find(feature => 
         feature.properties.PARCEL_UID === parcelParam ||
         feature.properties.PARCEL_ID === parcelParam ||
@@ -515,11 +569,20 @@ const ManateeMapPage = () => {
   const parcelStyle = (feature) => {
     const parcelId = feature.properties.PARCEL_UID; // Use PARCEL_UID which matches the ParcelInfoPanel getParcelId()
     const isSelected = selectedParcel === parcelId;
+    const isInMultiSelect = selectedParcels.has(parcelId) || selectedParcels.has(String(parcelId)) || selectedParcels.has(Number(parcelId));
     
     // Handle type conversion: check both the original value and string/number conversions
     const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId));
     
-    if (isFavorite) {
+    if (isInMultiSelect) {
+      return {
+        fillColor: '#f59e0b', // Amber/orange for multi-selected parcels
+        weight: 3,
+        opacity: 1,
+        color: '#d97706',
+        fillOpacity: 0.5
+      };
+    } else if (isFavorite) {
       return {
         fillColor: '#3b82f6', // Blue for favorites
         weight: 3,
@@ -671,6 +734,20 @@ const ManateeMapPage = () => {
                   <button
                     onClick={() => setSelectedParcel(null)}
                     className="text-blue-500 hover:text-blue-700"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              
+              {selectedParcels.size > 0 && (
+                <div className="flex items-center space-x-2 bg-amber-50 px-3 py-1 rounded-lg">
+                  <span className="text-sm text-amber-700 font-medium">
+                    Viewing {selectedParcels.size} parcel{selectedParcels.size > 1 ? 's' : ''}
+                  </span>
+                  <button
+                    onClick={() => setSelectedParcels(new Set())}
+                    className="text-amber-500 hover:text-amber-700"
                   >
                     ×
                   </button>

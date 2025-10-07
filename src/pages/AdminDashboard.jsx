@@ -763,8 +763,32 @@ const AdminDashboard = () => {
                   </p>
                 </div>
                 
-                {/* Export Button */}
+                {/* Export and View All Buttons */}
                 <div className="flex items-center gap-3">
+                  {getFilteredFavorites().length > 0 && (
+                    <button
+                      onClick={() => {
+                        const filtered = getFilteredFavorites()
+                        // Group by county
+                        const counties = [...new Set(filtered.map(fav => fav.county))]
+                        
+                        if (counties.length === 1) {
+                          // Single county - navigate with all parcels
+                          const county = counties[0]
+                          const parcelIds = filtered.map(fav => fav.parcel_id).join(',')
+                          navigate(`/${county.toLowerCase()}?parcels=${encodeURIComponent(parcelIds)}`)
+                        } else {
+                          // Multiple counties - show alert
+                          alert(`Please filter by a specific county to view all parcels on the map. Currently showing ${counties.length} counties: ${counties.join(', ')}`)
+                        }
+                      }}
+                      className="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      title="View all filtered parcels on map"
+                    >
+                      <MapIcon className="w-4 h-4 mr-2" />
+                      View All on Map ({getFilteredFavorites().length})
+                    </button>
+                  )}
                   <button
                     onClick={exportFavoritesToCSV}
                     className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -970,7 +994,7 @@ const AdminDashboard = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => navigate(`/${favorite.county.toLowerCase()}`)}
+                                onClick={() => navigate(`/${favorite.county.toLowerCase()}?parcel=${encodeURIComponent(favorite.parcel_id)}`)}
                                 className="text-primary-600 hover:text-primary-900 p-1 rounded"
                                 title={`View ${favorite.county} Map`}
                               >
