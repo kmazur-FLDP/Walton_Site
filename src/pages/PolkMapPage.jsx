@@ -556,13 +556,13 @@ const PolkMapPage = () => {
         fillOpacity: 0.5
       };
     } else if (isFavorite) {
-      console.log('🔵 BLUE PARCEL:', parcelId, typeof parcelId, 'matches favorite in set'); // Log every blue parcel
+      console.log('� MAGENTA PARCEL:', parcelId, typeof parcelId, 'matches favorite in set'); // Log every favorite parcel
       return {
-        fillColor: '#3b82f6', // Blue for favorites
-        weight: 3,
+        fillColor: '#ec4899', // Bright magenta/pink for favorites - stands out from yellow
+        weight: 4,
         opacity: 1,
-        color: '#1d4ed8',
-        fillOpacity: 0.4 // Increased from 0.3 to 0.4 for better visibility
+        color: '#be185d', // Darker magenta border
+        fillOpacity: 0.6 // High opacity for maximum visibility
       };
     } else if (isSelected) {
       return {
