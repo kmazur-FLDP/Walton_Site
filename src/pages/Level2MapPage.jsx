@@ -453,6 +453,92 @@ const Level2MapPage = () => {
     color: '#FDD835',  // Bright yellow outline
     fillOpacity: 0.4
   })
+
+  // Parcel click and hover functionality
+  const onEachParcel = (feature, layer) => {
+    const props = feature.properties
+    
+    // County-specific property name mapping and county identification
+    let parcelNumber = 'N/A';
+    let acres = 'N/A';
+    let county = 'Unknown';
+    
+    // Determine county and parcel number based on available properties
+    if (props.PARCEL_NUMBER) {
+      parcelNumber = props.PARCEL_NUMBER;
+      county = 'Hernando';
+    } else if (props.ALT_ID) {
+      parcelNumber = props.ALT_ID;
+      county = 'Citrus';
+    } else if (props.PARID) {
+      parcelNumber = props.PARID;
+      county = 'Manatee';
+    } else if (props.PARCEL_ID) {
+      // Both Pasco and Polk use PARCEL_ID, need to differentiate
+      parcelNumber = props.PARCEL_ID;
+      // Check for Pasco-specific properties to distinguish
+      if (props.TWN && props.RNG && props.SEC) {
+        // Check township values to distinguish (Pasco vs Polk have different ranges)
+        const township = props.TWN;
+        if (township && (township.includes('25S') || township.includes('26S') || township.includes('27S') || township.includes('28S'))) {
+          county = 'Pasco';
+        } else if (township && (township.includes('27S') || township.includes('28S') || township.includes('29S'))) {
+          county = 'Polk';
+        } else {
+          county = 'Pasco/Polk'; // Default if can't determine
+        }
+      } else {
+        county = 'Pasco/Polk'; // Default if can't determine
+      }
+    }
+    
+    // Determine acreage based on available properties
+    if (props.ACRES) {
+      acres = props.ACRES; // Hernando
+    } else if (props.Acres) {
+      acres = props.Acres; // Citrus, Pasco, Polk
+    } else if (props.LAND_ACREAGE_CAMA) {
+      acres = props.LAND_ACREAGE_CAMA; // Manatee
+    }
+    
+    const popupContent = `
+      <div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4;">
+        <div style="font-weight: bold; color: #1976d2; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0;">
+          📍 ${county} County Parcel
+        </div>
+        <div style="margin-bottom: 6px;">
+          <strong>Parcel Number:</strong><br/>
+          <span style="font-family: monospace; color: #2e7d32;">${parcelNumber}</span>
+        </div>
+        <div style="margin-bottom: 6px;">
+          <strong>Acreage:</strong> 
+          <span style="color: #d32f2f; font-weight: bold;">${acres} acres</span>
+        </div>
+      </div>
+    `
+    
+    layer.bindPopup(popupContent, {
+      maxWidth: 300,
+      className: 'custom-popup'
+    })
+
+    // Hover effects
+    layer.on({
+      mouseover: function (e) {
+        const layer = e.target
+        layer.setStyle({
+          weight: 4,
+          color: '#FF6F00', // Orange hover color
+          fillColor: '#FFE0B2', // Light orange fill
+          fillOpacity: 0.7
+        })
+      },
+      mouseout: function (e) {
+        const layer = e.target
+        layer.setStyle(parcelStyle())
+      }
+    })
+  }
   
   const topoStyle = () => ({
     color: '#8B4513', // Saddle brown color for better visibility
@@ -517,6 +603,7 @@ const Level2MapPage = () => {
               key="citrus-parcels"
               data={citrusParcels}
               style={parcelStyle()}
+              onEachFeature={onEachParcel}
             />
           )}
           
@@ -525,6 +612,7 @@ const Level2MapPage = () => {
               key="hernando-parcels"
               data={hernandoParcels}
               style={parcelStyle()}
+              onEachFeature={onEachParcel}
             />
           )}
           
@@ -533,6 +621,7 @@ const Level2MapPage = () => {
               key="manatee-parcels"
               data={manateeParcels}
               style={parcelStyle()}
+              onEachFeature={onEachParcel}
             />
           )}
           
@@ -541,6 +630,7 @@ const Level2MapPage = () => {
               key="pasco-parcels"
               data={pascoParcels}
               style={parcelStyle()}
+              onEachFeature={onEachParcel}
             />
           )}
           
@@ -549,6 +639,7 @@ const Level2MapPage = () => {
               key="polk-parcels"
               data={polkParcels}
               style={parcelStyle()}
+              onEachFeature={onEachParcel}
             />
           )}
           
