@@ -7,6 +7,7 @@ import HernandoMapPage from './pages/HernandoMapPage'
 import CitrusMapPage from './pages/CitrusMapPage'
 import PascoMapPage from './pages/PascoMapPage'
 import PolkMapPage from './pages/PolkMapPage'
+import Level2MapPage from './pages/Level2MapPage'
 import TestCitrusMap from './pages/TestCitrusMap'
 import CitrusDebugMap from './pages/CitrusDebugMap'
 import ManateeMapPage from './pages/ManateeMapPage'
@@ -134,6 +135,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <ManateeMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/level2"
+          element={
+            <ProtectedRoute>
+              <Level2MapPage />
             </ProtectedRoute>
           }
         />

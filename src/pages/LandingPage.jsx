@@ -480,6 +480,91 @@ const LandingPage = () => {
           </motion.div>
         </motion.div>
 
+        {/* Level 2 Analysis Section */}
+        <motion.div variants={containerVariants} className="mb-12">
+          <motion.h2 
+            variants={itemVariants}
+            className="text-2xl font-bold text-secondary-800 mb-4 text-center"
+          >
+            Level 2 Analysis
+          </motion.h2>
+          <motion.p
+            variants={itemVariants}
+            className="text-center text-gray-600 mb-8 max-w-2xl mx-auto"
+          >
+            Multi-county regional analysis with integrated environmental and planning data
+          </motion.p>
+          
+          <div className="max-w-2xl mx-auto">
+            <motion.div
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="card cursor-pointer hover:shadow-lg transition-all duration-200 group"
+              onClick={() => navigate('/level2')}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center group-hover:from-primary-600 group-hover:to-primary-800 transition-all">
+                    <Square3Stack3DIcon className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                      Level 2 Analysis
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Comprehensive multi-layer regional view
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Features Grid */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapIcon className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">Parcels</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900">5 Counties</div>
+                  <p className="text-xs text-gray-600 mt-1">Multi-county parcels</p>
+                </div>
+                
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <ChartBarIcon className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-gray-700">Planning</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900">FLU & Zoning</div>
+                  <p className="text-xs text-gray-600 mt-1">County planning data</p>
+                </div>
+                
+                <div className="bg-teal-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <EyeIcon className="w-4 h-4 text-teal-600" />
+                    <span className="text-sm font-medium text-gray-700">Environment</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900">4 Layers</div>
+                  <p className="text-xs text-gray-600 mt-1">Environmental data</p>
+                </div>
+              </div>
+              
+              {/* Description */}
+              <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  <strong className="text-primary-700">Advanced Analysis:</strong> View multiple counties simultaneously with comprehensive environmental and planning overlays including floodplain, wetlands, soils, topography, FLU designations, and zoning classifications.
+                </p>
+              </div>
+              
+              {/* Action Button */}
+              <button className="w-full py-3 px-4 rounded-lg font-medium bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow-md transition-all">
+                Open Level 2 Analysis
+              </button>
+            </motion.div>
+          </div>
+        </motion.div>
+
         {/* Counties Grid */}
         <motion.div variants={containerVariants} className="mb-12">
           <motion.h2 

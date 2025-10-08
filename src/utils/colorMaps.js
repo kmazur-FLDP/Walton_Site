@@ -872,3 +872,84 @@ export const getManateeFLULegend = (data) => {
     color: getManateeFLUColor(flulabel)
   }))
 }
+
+/**
+ * Soil color mappings based on MUNAME (Map Unit Name)
+ */
+export const getSoilColor = (muname) => {
+  if (!muname || muname.trim() === '') return '#D7CCC8' // Default light brown
+  
+  const name = muname.toLowerCase()
+  
+  // Water bodies
+  if (name.includes('water')) {
+    return '#2196F3' // Blue
+  }
+  
+  // Well-drained sandy soils - yellows/tans
+  if (name.includes('tavares') || name.includes('candler') || name.includes('lake')) {
+    return '#FFF59D' // Light yellow
+  }
+  
+  // Moderately drained soils - light browns
+  if (name.includes('millhopper') || name.includes('neilhurst')) {
+    return '#FFCC80' // Light orange
+  }
+  
+  // Poorly drained soils - darker browns/grays
+  if (name.includes('felda') || name.includes('myakka') || name.includes('smyrna')) {
+    return '#8D6E63' // Brown
+  }
+  
+  // Very poorly drained/hydric soils - dark grays/blues
+  if (name.includes('basinger') || name.includes('haplaquents')) {
+    return '#455A64' // Dark gray
+  }
+  
+  // Spodosols (acidic forest soils) - reddish browns
+  if (name.includes('zolfo') || name.includes('adamsville')) {
+    return '#A1887F' // Light brown
+  }
+  
+  // Fine sand categories - by texture and drainage
+  if (name.includes('fine sand')) {
+    if (name.includes('depressional')) {
+      return '#455A64' // Very dark for wetland soils
+    } else if (name.includes('poorly')) {
+      return '#6D4C41' // Dark brown
+    } else if (name.includes('well')) {
+      return '#FFAB91' // Light peach
+    } else {
+      return '#BCAAA4' // Medium brown
+    }
+  }
+  
+  // Clayey soils - blue-grays
+  if (name.includes('clayey')) {
+    return '#607D8B' // Blue-gray
+  }
+  
+  // Mucky soils - very dark
+  if (name.includes('mucky')) {
+    return '#37474F' // Very dark gray
+  }
+  
+  // Default color based on string hash for consistency
+  return stringToColor(muname)
+}
+
+/**
+ * Get GeoJSON style for soil layer
+ */
+export const getSoilStyle = (feature) => {
+  const muname = feature.properties?.MUNAME || ''
+  const color = getSoilColor(muname)
+  
+  return {
+    fillColor: color,
+    weight: 1,
+    opacity: 0.6,
+    color: '#444',
+    fillOpacity: 0.5
+  }
+}
