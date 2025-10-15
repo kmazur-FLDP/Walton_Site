@@ -645,14 +645,19 @@ const Level2MapPage = () => {
     layer.on('popupopen', () => {
       const favoriteBtn = document.getElementById(`favorite-btn-${parcelNumber}`)
       if (favoriteBtn) {
-        favoriteBtn.onclick = (e) => {
+        favoriteBtn.onclick = async (e) => {
           e.stopPropagation()
-          toggleFavorite(parcelNumber, county)
           
-          // Update the button appearance immediately
-          const currentIsFavorited = favorites.has(parcelNumber) || favorites.has(String(parcelNumber))
-          favoriteBtn.textContent = currentIsFavorited ? '☆' : '⭐'
-          favoriteBtn.title = currentIsFavorited ? 'Add to favorites' : 'Remove from favorites'
+          // Check current state BEFORE toggle
+          const wasAlreadyFavorited = favorites.has(parcelNumber) || favorites.has(String(parcelNumber))
+          
+          // Toggle the favorite
+          await toggleFavorite(parcelNumber, county)
+          
+          // Update button to show the NEW state (opposite of what it was)
+          const isNowFavorited = !wasAlreadyFavorited
+          favoriteBtn.innerHTML = `${isNowFavorited ? '⭐' : '☆'} <span style="font-size: 11px; font-weight: 600;">${isNowFavorited ? 'FAVORITED' : 'FAVORITE'}</span>`
+          favoriteBtn.title = isNowFavorited ? 'Remove from favorites' : 'Add to favorites'
         }
       }
     })
