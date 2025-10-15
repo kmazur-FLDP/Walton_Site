@@ -565,6 +565,20 @@ const LandingPage = () => {
           </div>
         </motion.div>
 
+        {/* Divider */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t-2 border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-6 py-2 bg-white text-lg font-semibold text-gray-700 rounded-full shadow-sm">
+                Level 1 Analysis
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Counties Grid */}
         <motion.div variants={containerVariants} className="mb-12">
           <motion.h2 
