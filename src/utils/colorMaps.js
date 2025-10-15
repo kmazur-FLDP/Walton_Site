@@ -872,3 +872,196 @@ export const getManateeFLULegend = (data) => {
     color: getManateeFLUColor(flulabel)
   }))
 }
+
+/**
+ * Soil color mappings based on MUNAME (Map Unit Name)
+ * Uses a comprehensive color palette for better visual distinction
+ */
+export const getSoilColor = (muname) => {
+  if (!muname || muname.trim() === '') return '#D7CCC8' // Default light brown
+  
+  const name = muname.toLowerCase()
+  
+  // Water bodies - Blues
+  if (name.includes('water')) {
+    return '#1976D2' // Deep blue
+  }
+  
+  // Excessively drained sandy soils - Bright yellows/golds
+  if (name.includes('tavares') || name.includes('candler')) {
+    return '#FFD600' // Bright gold
+  }
+  if (name.includes('lake')) {
+    return '#FFF350' // Bright yellow
+  }
+  if (name.includes('astatula')) {
+    return '#FFEB3B' // Yellow
+  }
+  
+  // Well-drained sandy soils - Light oranges/peaches  
+  if (name.includes('millhopper')) {
+    return '#FF9800' // Orange
+  }
+  if (name.includes('arredondo')) {
+    return '#FFB74D' // Light orange
+  }
+  if (name.includes('gainesville')) {
+    return '#FFCC80' // Peach
+  }
+  
+  // Moderately well-drained soils - Light browns/tans
+  if (name.includes('neilhurst')) {
+    return '#BCAAA4' // Light brown
+  }
+  if (name.includes('bonneau')) {
+    return '#D7CCC8' // Very light brown
+  }
+  if (name.includes('sparr')) {
+    return '#A1887F' // Medium brown
+  }
+  
+  // Somewhat poorly drained soils - Medium browns/grays
+  if (name.includes('pomona')) {
+    return '#8D6E63' // Brown
+  }
+  if (name.includes('winder')) {
+    return '#795548' // Dark brown
+  }
+  if (name.includes('emeralda')) {
+    return '#6D4C41' // Very dark brown
+  }
+  
+  // Poorly drained soils - Dark grays/blue-grays
+  if (name.includes('felda')) {
+    return '#607D8B' // Blue-gray
+  }
+  if (name.includes('myakka')) {
+    return '#546E7A' // Dark blue-gray
+  }
+  if (name.includes('smyrna')) {
+    return '#455A64' // Very dark blue-gray
+  }
+  if (name.includes('immokalee')) {
+    return '#37474F' // Almost black
+  }
+  
+  // Very poorly drained/hydric soils - Dark colors
+  if (name.includes('basinger')) {
+    return '#263238' // Very dark gray
+  }
+  if (name.includes('haplaquents')) {
+    return '#212121' // Almost black
+  }
+  if (name.includes('terra ceia')) {
+    return '#1A1A1A' // Black
+  }
+  
+  // Spodosols (acidic forest soils) - Reds/reddish browns
+  if (name.includes('zolfo')) {
+    return '#D32F2F' // Red
+  }
+  if (name.includes('adamsville')) {
+    return '#F44336' // Bright red
+  }
+  if (name.includes('wauchula')) {
+    return '#E57373' // Light red
+  }
+  
+  // Urban/disturbed soils - Grays
+  if (name.includes('urban')) {
+    return '#9E9E9E' // Medium gray
+  }
+  if (name.includes('udorthents')) {
+    return '#757575' // Dark gray
+  }
+  
+  // Fine sand categories - Greens (natural vegetation)
+  if (name.includes('fine sand')) {
+    if (name.includes('depressional')) {
+      return '#1B5E20' // Very dark green (wetland)
+    } else if (name.includes('poorly')) {
+      return '#388E3C' // Dark green
+    } else if (name.includes('well')) {
+      return '#4CAF50' // Green
+    } else if (name.includes('moderately')) {
+      return '#66BB6A' // Light green
+    } else {
+      return '#81C784' // Very light green
+    }
+  }
+  
+  // Clayey soils - Purples
+  if (name.includes('clayey')) {
+    return '#673AB7' // Deep purple
+  }
+  if (name.includes('clay')) {
+    return '#9C27B0' // Purple
+  }
+  
+  // Mucky soils - Very dark colors
+  if (name.includes('mucky')) {
+    return '#0D0D0D' // Almost black
+  }
+  if (name.includes('muck')) {
+    return '#141414' // Very dark
+  }
+  
+  // Limestone/marl soils - Light colors
+  if (name.includes('limestone') || name.includes('marl')) {
+    return '#EEEEEE' // Very light gray
+  }
+  
+  // Organic soils - Dark browns
+  if (name.includes('histosols') || name.includes('saprists')) {
+    return '#3E2723' // Very dark brown
+  }
+  
+  // Sandy loam soils - Teal/cyan family
+  if (name.includes('sandy loam')) {
+    return '#00ACC1' // Cyan
+  }
+  if (name.includes('loamy')) {
+    return '#26C6DA' // Light cyan
+  }
+  
+  // Specific soil series - Distinct colors
+  if (name.includes('blichton')) return '#E91E63' // Pink
+  if (name.includes('kanapaha')) return '#9C27B0' // Purple
+  if (name.includes('micanopy')) return '#673AB7' // Deep purple
+  if (name.includes('lochloosa')) return '#3F51B5' // Indigo
+  if (name.includes('boardman')) return '#2196F3' // Blue
+  if (name.includes('samsula')) return '#00BCD4' // Cyan
+  if (name.includes('chobee')) return '#009688' // Teal
+  if (name.includes('holopaw')) return '#795548' // Brown
+  if (name.includes('floridana')) return '#FF5722' // Deep orange
+  if (name.includes('riviera')) return '#607D8B' // Blue-gray
+  
+  // If no specific match, use hash-based color with broader range
+  let hash = 0
+  for (let i = 0; i < muname.length; i++) {
+    hash = muname.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  
+  // Generate more distinct colors using broader hue range
+  const hue = Math.abs(hash) % 360
+  const saturation = 70 + (Math.abs(hash) % 25) // 70-95% saturation for vivid colors
+  const lightness = 40 + (Math.abs(hash) % 30) // 40-70% lightness for good contrast
+  
+  return hslToHex(hue, saturation, lightness)
+}
+
+/**
+ * Get GeoJSON style for soil layer
+ */
+export const getSoilStyle = (feature) => {
+  const muname = feature.properties?.MUNAME || ''
+  const color = getSoilColor(muname)
+  
+  return {
+    fillColor: color,
+    weight: 1,
+    opacity: 0.6,
+    color: '#444',
+    fillOpacity: 0.5
+  }
+}
