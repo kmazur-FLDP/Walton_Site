@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
-import { ArrowLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, EyeIcon, EyeSlashIcon, StarIcon as StarOutline } from '@heroicons/react/24/outline'
+import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
+import favoritesService from '../services/favoritesService'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { PMTiles } from 'pmtiles'
@@ -274,6 +276,7 @@ const PMTilesVectorLayer = ({ pmtilesUrl, visible, style, layerName }) => {
 const Level2MapPage = () => {
   const navigate = useNavigate()
   const [mapInstance, setMapInstance] = useState(null)
+  const [favorites, setFavorites] = useState(new Set())
   
   // Layer data states
   const [citrusParcels, setCitrusParcels] = useState(null)
@@ -358,6 +361,36 @@ const Level2MapPage = () => {
       osm: layerKey === 'osm'
     }))
   }
+  
+  // Load user favorites for all counties
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        // Load favorites from all counties
+        const citrusFavs = await favoritesService.getFavoritesByCounty('Citrus')
+        const hernandoFavs = await favoritesService.getFavoritesByCounty('Hernando')
+        const manateeFavs = await favoritesService.getFavoritesByCounty('Manatee')
+        const pascoFavs = await favoritesService.getFavoritesByCounty('Pasco')
+        const polkFavs = await favoritesService.getFavoritesByCounty('Polk')
+        
+        // Combine all favorite IDs into a single Set
+        const allFavorites = [
+          ...citrusFavs,
+          ...hernandoFavs,
+          ...manateeFavs,
+          ...pascoFavs,
+          ...polkFavs
+        ]
+        
+        const favoriteIds = new Set(allFavorites.map(fav => fav.parcel_id))
+        setFavorites(favoriteIds)
+      } catch (err) {
+        console.error('Error loading favorites:', err)
+      }
+    }
+
+    loadFavorites()
+  }, [])
   
   // Load all layer data
   useEffect(() => {
@@ -445,14 +478,86 @@ const Level2MapPage = () => {
   
   // Remove the handleLayerAdd and useEffect since we're handling it in toggleLayer now
   
-  // Styling functions
-  const parcelStyle = () => ({
-    fillColor: '#FFEB3B',  // Bright yellow fill
-    weight: 3,
-    opacity: 1,
-    color: '#FDD835',  // Bright yellow outline
-    fillOpacity: 0.4
-  })
+  // Styling functions - dynamic based on favorite status
+  const parcelStyle = (feature) => {
+    // Safety check - return default style if no feature provided
+    if (!feature || !feature.properties) {
+      return {
+        fillColor: '#FFEB3B',  // Bright yellow fill (default)
+        weight: 3,
+        opacity: 1,
+        color: '#FDD835',  // Bright yellow outline
+        fillOpacity: 0.4
+      }
+    }
+    
+    const props = feature.properties
+    
+    // Get parcel ID based on county-specific properties
+    let parcelId
+    if (props.PARCEL_NUMBER) {
+      parcelId = props.PARCEL_NUMBER // Hernando
+    } else if (props.ALT_ID) {
+      parcelId = props.ALT_ID // Citrus
+    } else if (props.PARID) {
+      parcelId = props.PARID // Manatee
+    } else if (props.PARCEL_ID) {
+      parcelId = props.PARCEL_ID // Pasco, Polk
+    }
+    
+    // Check if this parcel is favorited
+    const isFavorite = favorites.has(parcelId) || favorites.has(String(parcelId)) || favorites.has(Number(parcelId))
+    
+    if (isFavorite) {
+      return {
+        fillColor: '#06b6d4', // Bright cyan - stands out from yellow
+        weight: 6,
+        opacity: 1,
+        color: '#0e7490', // Dark cyan border
+        fillOpacity: 0.85 // Very high opacity - nearly solid
+      }
+    } else {
+      return {
+        fillColor: '#FFEB3B',  // Bright yellow fill (default)
+        weight: 3,
+        opacity: 1,
+        color: '#FDD835',  // Bright yellow outline
+        fillOpacity: 0.4
+      }
+    }
+  }
+
+  // Toggle favorite for a parcel
+  const toggleFavorite = useCallback(async (parcelId, county) => {
+    try {
+      // Toggle in database
+      const isNowFavorited = await favoritesService.toggleFavorite(parcelId, county, null)
+      
+      // Update local state
+      const newFavorites = new Set(favorites)
+      if (isNowFavorited) {
+        newFavorites.add(parcelId)
+      } else {
+        newFavorites.delete(parcelId)
+      }
+      setFavorites(newFavorites)
+      
+      // Force a re-render of parcel layers by updating the map
+      if (mapInstance) {
+        mapInstance.eachLayer((layer) => {
+          if (layer.feature && layer.setStyle) {
+            // Re-apply the style to reflect favorite status change
+            layer.setStyle(parcelStyle(layer.feature))
+          }
+        })
+      }
+      
+      console.log(`Parcel ${parcelId} in ${county} ${isNowFavorited ? 'added to' : 'removed from'} favorites`)
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favorites, mapInstance])
 
   // Parcel click and hover functionality
   const onEachParcel = (feature, layer) => {
@@ -501,10 +606,24 @@ const Level2MapPage = () => {
       acres = props.LAND_ACREAGE_CAMA; // Manatee
     }
     
+    // Check if this parcel is favorited
+    const isFavorited = favorites.has(parcelNumber) || favorites.has(String(parcelNumber))
+    const starIcon = isFavorited ? '⭐' : '☆'
+    const favoriteText = isFavorited ? 'Remove from favorites' : 'Add to favorites'
+    
     const popupContent = `
       <div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4;">
-        <div style="font-weight: bold; color: #1976d2; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0;">
+        <div style="font-weight: bold; color: #1976d2; margin-bottom: 4px;">
           📍 ${county} County Parcel
+        </div>
+        <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">
+          <button 
+            id="favorite-btn-${parcelNumber}" 
+            style="background: none; border: 1px solid #FFB300; border-radius: 4px; cursor: pointer; font-size: 16px; padding: 4px 12px; line-height: 1; color: #FFB300; display: inline-flex; align-items: center; gap: 4px;" 
+            title="${favoriteText}"
+          >
+            ${starIcon} <span style="font-size: 11px; font-weight: 600;">${isFavorited ? 'FAVORITED' : 'FAVORITE'}</span>
+          </button>
         </div>
         <div style="margin-bottom: 6px;">
           <strong>Parcel Number:</strong><br/>
@@ -521,6 +640,22 @@ const Level2MapPage = () => {
       maxWidth: 300,
       className: 'custom-popup'
     })
+    
+    // Add click handler for favorite button when popup opens
+    layer.on('popupopen', () => {
+      const favoriteBtn = document.getElementById(`favorite-btn-${parcelNumber}`)
+      if (favoriteBtn) {
+        favoriteBtn.onclick = (e) => {
+          e.stopPropagation()
+          toggleFavorite(parcelNumber, county)
+          
+          // Update the button appearance immediately
+          const currentIsFavorited = favorites.has(parcelNumber) || favorites.has(String(parcelNumber))
+          favoriteBtn.textContent = currentIsFavorited ? '☆' : '⭐'
+          favoriteBtn.title = currentIsFavorited ? 'Add to favorites' : 'Remove from favorites'
+        }
+      }
+    })
 
     // Hover effects
     layer.on({
@@ -535,7 +670,7 @@ const Level2MapPage = () => {
       },
       mouseout: function (e) {
         const layer = e.target
-        layer.setStyle(parcelStyle())
+        layer.setStyle(parcelStyle(feature))
       }
     })
   }
@@ -602,7 +737,7 @@ const Level2MapPage = () => {
             <GeoJSON
               key="citrus-parcels"
               data={citrusParcels}
-              style={parcelStyle()}
+              style={parcelStyle}
               onEachFeature={onEachParcel}
             />
           )}
@@ -611,7 +746,7 @@ const Level2MapPage = () => {
             <GeoJSON
               key="hernando-parcels"
               data={hernandoParcels}
-              style={parcelStyle()}
+              style={parcelStyle}
               onEachFeature={onEachParcel}
             />
           )}
@@ -620,7 +755,7 @@ const Level2MapPage = () => {
             <GeoJSON
               key="manatee-parcels"
               data={manateeParcels}
-              style={parcelStyle()}
+              style={parcelStyle}
               onEachFeature={onEachParcel}
             />
           )}
@@ -629,7 +764,7 @@ const Level2MapPage = () => {
             <GeoJSON
               key="pasco-parcels"
               data={pascoParcels}
-              style={parcelStyle()}
+              style={parcelStyle}
               onEachFeature={onEachParcel}
             />
           )}
@@ -638,7 +773,7 @@ const Level2MapPage = () => {
             <GeoJSON
               key="polk-parcels"
               data={polkParcels}
-              style={parcelStyle()}
+              style={parcelStyle}
               onEachFeature={onEachParcel}
             />
           )}
