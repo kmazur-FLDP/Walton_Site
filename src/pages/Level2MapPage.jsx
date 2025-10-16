@@ -370,23 +370,23 @@ const Level2MapPage = () => {
         // Check if user is admin
         const isAdmin = await adminService.isAdmin()
         
-        // Load favorites from all counties
+        // Load favorites from all counties for Level 2 map only
         // Admins see all favorites, regular users see only their own
         const citrusFavs = isAdmin 
-          ? await favoritesService.getAllFavoritesByCounty('Citrus')
-          : await favoritesService.getFavoritesByCounty('Citrus')
+          ? await favoritesService.getAllFavoritesByCounty('Citrus', 'level2')
+          : await favoritesService.getFavoritesByCounty('Citrus', 'level2')
         const hernandoFavs = isAdmin
-          ? await favoritesService.getAllFavoritesByCounty('Hernando')
-          : await favoritesService.getFavoritesByCounty('Hernando')
+          ? await favoritesService.getAllFavoritesByCounty('Hernando', 'level2')
+          : await favoritesService.getFavoritesByCounty('Hernando', 'level2')
         const manateeFavs = isAdmin
-          ? await favoritesService.getAllFavoritesByCounty('Manatee')
-          : await favoritesService.getFavoritesByCounty('Manatee')
+          ? await favoritesService.getAllFavoritesByCounty('Manatee', 'level2')
+          : await favoritesService.getFavoritesByCounty('Manatee', 'level2')
         const pascoFavs = isAdmin
-          ? await favoritesService.getAllFavoritesByCounty('Pasco')
-          : await favoritesService.getFavoritesByCounty('Pasco')
+          ? await favoritesService.getAllFavoritesByCounty('Pasco', 'level2')
+          : await favoritesService.getFavoritesByCounty('Pasco', 'level2')
         const polkFavs = isAdmin
-          ? await favoritesService.getAllFavoritesByCounty('Polk')
-          : await favoritesService.getFavoritesByCounty('Polk')
+          ? await favoritesService.getAllFavoritesByCounty('Polk', 'level2')
+          : await favoritesService.getFavoritesByCounty('Polk', 'level2')
         
         // Combine all favorite IDs into a single Set
         const allFavorites = [
@@ -545,8 +545,8 @@ const Level2MapPage = () => {
   // Toggle favorite for a parcel
   const toggleFavorite = useCallback(async (parcelId, county) => {
     try {
-      // Toggle in database
-      const isNowFavorited = await favoritesService.toggleFavorite(parcelId, county, null)
+      // Toggle in database with level2 flag
+      const isNowFavorited = await favoritesService.toggleFavorite(parcelId, county, null, 'level2')
       
       // Update local state
       const newFavorites = new Set(favorites)

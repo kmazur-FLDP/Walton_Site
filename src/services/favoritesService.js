@@ -27,9 +27,10 @@ class FavoritesService {
   /**
    * Get favorite parcels for a specific county
    * @param {string} county - County name
+   * @param {string} mapLevel - Map level ('level1' or 'level2')
    * @returns {Promise<Array>} Array of favorite parcels for the county
    */
-  async getFavoritesByCounty(county) {
+  async getFavoritesByCounty(county, mapLevel = 'level1') {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No authenticated user')
@@ -39,6 +40,7 @@ class FavoritesService {
         .select('*')
         .eq('user_id', user.id)
         .eq('county', county)
+        .eq('map_level', mapLevel)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -55,11 +57,12 @@ class FavoritesService {
    * @param {string} county - County name
    * @param {string} parcelAddress - Parcel address (optional)
    * @param {string} notes - User notes (optional)
+   * @param {string} mapLevel - Map level ('level1' or 'level2')
    * @returns {Promise<Object|null>} Created favorite record
    */
-  async addFavorite(parcelId, county, parcelAddress = null, notes = null) {
+  async addFavorite(parcelId, county, parcelAddress = null, notes = null, mapLevel = 'level1') {
     try {
-      console.log(`FavoritesService: Adding favorite - parcelId: ${parcelId}, county: ${county}`)
+      console.log(`FavoritesService: Adding favorite - parcelId: ${parcelId}, county: ${county}, mapLevel: ${mapLevel}`)
       
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -76,7 +79,8 @@ class FavoritesService {
           parcel_id: parcelId,
           county: county,
           parcel_address: parcelAddress,
-          notes: notes
+          notes: notes,
+          map_level: mapLevel
         })
         .select()
         .single()
@@ -98,11 +102,12 @@ class FavoritesService {
    * Remove a parcel from favorites
    * @param {string} parcelId - Parcel ID
    * @param {string} county - County name (optional, for extra safety)
+   * @param {string} mapLevel - Map level ('level1' or 'level2')
    * @returns {Promise<boolean>} Success status
    */
-  async removeFavorite(parcelId, county = null) {
+  async removeFavorite(parcelId, county = null, mapLevel = 'level1') {
     try {
-      console.log(`FavoritesService: Removing favorite - parcelId: ${parcelId}, county: ${county}`)
+      console.log(`FavoritesService: Removing favorite - parcelId: ${parcelId}, county: ${county}, mapLevel: ${mapLevel}`)
       
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -115,6 +120,7 @@ class FavoritesService {
         .delete()
         .eq('user_id', user.id)
         .eq('parcel_id', parcelId)
+        .eq('map_level', mapLevel)
 
       if (county) {
         query = query.eq('county', county)
@@ -139,11 +145,12 @@ class FavoritesService {
    * Check if a parcel is favorited
    * @param {string} parcelId - Parcel ID
    * @param {string} county - County name
+   * @param {string} mapLevel - Map level ('level1' or 'level2')
    * @returns {Promise<boolean>} Whether the parcel is favorited
    */
-  async isFavorite(parcelId, county) {
+  async isFavorite(parcelId, county, mapLevel = 'level1') {
     try {
-      console.log(`FavoritesService: Checking favorite status - parcelId: ${parcelId}, county: ${county}`)
+      console.log(`FavoritesService: Checking favorite status - parcelId: ${parcelId}, county: ${county}, mapLevel: ${mapLevel}`)
       
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -157,6 +164,7 @@ class FavoritesService {
         .eq('user_id', user.id)
         .eq('parcel_id', parcelId)
         .eq('county', county)
+        .eq('map_level', mapLevel)
         .single()
 
       if (error && error.code !== 'PGRST116') {
@@ -178,22 +186,23 @@ class FavoritesService {
    * @param {string} parcelId - Parcel ID
    * @param {string} county - County name
    * @param {string} parcelAddress - Parcel address (optional)
+   * @param {string} mapLevel - Map level ('level1' or 'level2')
    * @returns {Promise<boolean>} New favorite status (true = favorited, false = unfavorited)
    */
-  async toggleFavorite(parcelId, county, parcelAddress = null) {
+  async toggleFavorite(parcelId, county, parcelAddress = null, mapLevel = 'level1') {
     try {
-      console.log(`FavoritesService: Toggling favorite - parcelId: ${parcelId}, county: ${county}`)
+      console.log(`FavoritesService: Toggling favorite - parcelId: ${parcelId}, county: ${county}, mapLevel: ${mapLevel}`)
       
-      const isFav = await this.isFavorite(parcelId, county)
+      const isFav = await this.isFavorite(parcelId, county, mapLevel)
       console.log(`FavoritesService: Current favorite status: ${isFav}`)
       
       if (isFav) {
         console.log('FavoritesService: Removing from favorites')
-        const success = await this.removeFavorite(parcelId, county)
+        const success = await this.removeFavorite(parcelId, county, mapLevel)
         return success ? false : isFav // If removal failed, keep current status
       } else {
         console.log('FavoritesService: Adding to favorites')
-        const result = await this.addFavorite(parcelId, county, parcelAddress)
+        const result = await this.addFavorite(parcelId, county, parcelAddress, null, mapLevel)
         return result ? true : false
       }
     } catch (error) {
@@ -205,14 +214,16 @@ class FavoritesService {
   /**
    * Get all favorites from all users by county (admin only)
    * @param {string} county - County name
+   * @param {string} mapLevel - Map level ('level1' or 'level2')
    * @returns {Promise<Array>} Array of all favorite parcels for the county
    */
-  async getAllFavoritesByCounty(county) {
+  async getAllFavoritesByCounty(county, mapLevel = 'level1') {
     try {
       const { data, error } = await supabase
         .from('favorite_parcels')
         .select('*')
         .eq('county', county)
+        .eq('map_level', mapLevel)
         .order('created_at', { ascending: false })
 
       if (error) throw error
