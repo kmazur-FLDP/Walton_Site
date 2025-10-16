@@ -201,6 +201,46 @@ class FavoritesService {
       return false
     }
   }
+
+  /**
+   * Get all favorites from all users by county (admin only)
+   * @param {string} county - County name
+   * @returns {Promise<Array>} Array of all favorite parcels for the county
+   */
+  async getAllFavoritesByCounty(county) {
+    try {
+      const { data, error } = await supabase
+        .from('favorite_parcels')
+        .select('*')
+        .eq('county', county)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching all county favorites:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get all favorites from all users (admin only)
+   * @returns {Promise<Array>} Array of all favorite parcels
+   */
+  async getAllFavorites() {
+    try {
+      const { data, error } = await supabase
+        .from('favorite_parcels')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching all favorites:', error)
+      return []
+    }
+  }
 }
 
 // Create and export singleton instance

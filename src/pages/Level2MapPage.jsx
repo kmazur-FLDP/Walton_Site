@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
 import { ArrowLeftIcon, EyeIcon, EyeSlashIcon, StarIcon as StarOutline } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import favoritesService from '../services/favoritesService'
+import adminService from '../services/adminService'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { PMTiles } from 'pmtiles'
@@ -362,16 +363,30 @@ const Level2MapPage = () => {
     }))
   }
   
-  // Load user favorites for all counties
+  // Load user favorites for all counties (or all favorites if admin)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
+        // Check if user is admin
+        const isAdmin = await adminService.isAdmin()
+        
         // Load favorites from all counties
-        const citrusFavs = await favoritesService.getFavoritesByCounty('Citrus')
-        const hernandoFavs = await favoritesService.getFavoritesByCounty('Hernando')
-        const manateeFavs = await favoritesService.getFavoritesByCounty('Manatee')
-        const pascoFavs = await favoritesService.getFavoritesByCounty('Pasco')
-        const polkFavs = await favoritesService.getFavoritesByCounty('Polk')
+        // Admins see all favorites, regular users see only their own
+        const citrusFavs = isAdmin 
+          ? await favoritesService.getAllFavoritesByCounty('Citrus')
+          : await favoritesService.getFavoritesByCounty('Citrus')
+        const hernandoFavs = isAdmin
+          ? await favoritesService.getAllFavoritesByCounty('Hernando')
+          : await favoritesService.getFavoritesByCounty('Hernando')
+        const manateeFavs = isAdmin
+          ? await favoritesService.getAllFavoritesByCounty('Manatee')
+          : await favoritesService.getFavoritesByCounty('Manatee')
+        const pascoFavs = isAdmin
+          ? await favoritesService.getAllFavoritesByCounty('Pasco')
+          : await favoritesService.getFavoritesByCounty('Pasco')
+        const polkFavs = isAdmin
+          ? await favoritesService.getAllFavoritesByCounty('Polk')
+          : await favoritesService.getFavoritesByCounty('Polk')
         
         // Combine all favorite IDs into a single Set
         const allFavorites = [
