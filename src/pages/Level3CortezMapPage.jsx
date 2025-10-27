@@ -267,9 +267,18 @@ const Level3CortezMapPage = () => {
   }
 
   return (
-    <div className="w-screen bg-gray-900 flex pt-16" style={{ minHeight: '100vh' }}>
-      {/* Left Sidebar */}
-      <div className="w-80 bg-white shadow-2xl flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
+    <>
+      {/* Left Sidebar - Fixed Position */}
+      <div 
+        className="w-80 bg-white shadow-2xl flex flex-col overflow-y-auto" 
+        style={{ 
+          position: 'fixed', 
+          top: '64px', 
+          left: 0, 
+          bottom: '44px',
+          zIndex: 10
+        }}
+      >
         {/* Sidebar Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4">
           <button
@@ -478,9 +487,17 @@ const Level3CortezMapPage = () => {
         </div> {/* End of space-y-4 */}
       </div> {/* End of Map Layers Section */}
       </div> {/* End of Sidebar */}
-
       {/* Main Content Area - Map */}
-      <div className="flex-1 relative">
+      <div 
+        className="relative" 
+        style={{ 
+          position: 'fixed',
+          top: '64px',
+          left: '320px',
+          right: 0,
+          bottom: '44px'
+        }}
+      >
         {loading && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1000]">
             <div className="bg-white rounded-lg shadow-xl p-6 flex items-center gap-3">
@@ -495,7 +512,7 @@ const Level3CortezMapPage = () => {
           ref={mapRef}
           center={[28.55, -82.55]}
           zoom={16}
-          style={{ height: '100vh', width: '100%' }}
+          style={{ height: '100%', width: '100%' }}
           className="z-0"
         >
           {/* Aerial imagery */}
@@ -595,7 +612,7 @@ const Level3CortezMapPage = () => {
           )}
         </MapContainer>
       </div>
-    </div>
+    </>
   )
 }
 
