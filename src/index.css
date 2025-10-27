@@ -230,3 +230,20 @@
 .custom-popup .leaflet-popup-tip {
   border-top-color: #e5e7eb !important;
 }
+
+/* Contour label styling */
+.contour-label {
+  background: rgba(210, 105, 30, 0.85) !important;
+  border: 1px solid rgba(139, 69, 19, 0.9) !important;
+  border-radius: 3px !important;
+  padding: 2px 6px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+  white-space: nowrap !important;
+}
+
+.contour-label::before {
+  display: none !important;
+}

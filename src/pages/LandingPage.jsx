@@ -480,6 +480,86 @@ const LandingPage = () => {
           </motion.div>
         </motion.div>
 
+        {/* Level 3 Analysis Section */}
+        <motion.div variants={containerVariants} className="mb-12">
+          <motion.h2 
+            variants={itemVariants}
+            className="text-2xl font-bold text-secondary-800 mb-4 text-center"
+          >
+            Level 3 Analysis
+          </motion.h2>
+          <motion.p
+            variants={itemVariants}
+            className="text-center text-gray-600 mb-8 max-w-2xl mx-auto"
+          >
+            Detailed parcel-level analysis with comprehensive site-specific data layers
+          </motion.p>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Cortez Parcel Card */}
+              <motion.div
+                variants={itemVariants}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="card cursor-pointer hover:shadow-lg transition-all duration-200 group"
+                onClick={() => navigate('/level3/cortez')}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center group-hover:from-accent-600 group-hover:to-accent-800 transition-all">
+                      <MapIcon className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-accent-600 transition-colors">
+                        Cortez Parcel
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Hernando County
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Stats */}
+                <div className="bg-accent-50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-700">Data Layers</span>
+                    <span className="text-lg font-bold text-gray-900">8</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">Complete site analysis</p>
+                </div>
+                
+                {/* Features List */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    Floodplain & Wetlands
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    FLU & Zoning
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    Water & Pressure Pipes
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    Topography
+                  </div>
+                </div>
+                
+                {/* Action Button */}
+                <button className="w-full py-2 px-3 rounded-lg text-sm font-medium bg-accent-600 hover:bg-accent-700 text-white shadow-sm hover:shadow-md transition-all">
+                  View Parcel Analysis
+                </button>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Level 2 Analysis Section */}
         <motion.div variants={containerVariants} className="mb-12">
           <motion.h2 

@@ -8,6 +8,7 @@ import CitrusMapPage from './pages/CitrusMapPage'
 import PascoMapPage from './pages/PascoMapPage'
 import PolkMapPage from './pages/PolkMapPage'
 import Level2MapPage from './pages/Level2MapPage'
+import Level3CortezMapPage from './pages/Level3CortezMapPage'
 import TestCitrusMap from './pages/TestCitrusMap'
 import CitrusDebugMap from './pages/CitrusDebugMap'
 import ManateeMapPage from './pages/ManateeMapPage'
@@ -143,6 +144,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <Level2MapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/level3/cortez"
+          element={
+            <ProtectedRoute>
+              <Level3CortezMapPage />
             </ProtectedRoute>
           }
         />
