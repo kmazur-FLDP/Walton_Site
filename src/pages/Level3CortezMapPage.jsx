@@ -23,10 +23,6 @@ const MapController = ({ parcelData, onMapReady }) => {
         const bounds = L.geoJSON(parcelData).getBounds()
         if (bounds.isValid()) {
           map.fitBounds(bounds, { padding: [50, 50] })
-          // Zoom out by 1 level after fitting
-          setTimeout(() => {
-            map.zoomOut(1)
-          }, 100)
         }
       } catch (err) {
         console.error('Error fitting bounds:', err)

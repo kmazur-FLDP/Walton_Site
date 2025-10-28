@@ -10,6 +10,8 @@ import PolkMapPage from './pages/PolkMapPage'
 import Level2MapPage from './pages/Level2MapPage'
 import Level3CortezMapPage from './pages/Level3CortezMapPage'
 import Level3JasmineMapPage from './pages/Level3JasmineMapPage'
+import Level3PleasantGroveMapPage from './pages/Level3PleasantGroveMapPage'
+import Level3CitrusSpringsMapPage from './pages/Level3CitrusSpringsMapPage'
 import TestCitrusMap from './pages/TestCitrusMap'
 import CitrusDebugMap from './pages/CitrusDebugMap'
 import ManateeMapPage from './pages/ManateeMapPage'
@@ -161,6 +163,22 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <Level3JasmineMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/level3/pleasantgrove"
+          element={
+            <ProtectedRoute>
+              <Level3PleasantGroveMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/level3/citrussprings"
+          element={
+            <ProtectedRoute>
+              <Level3CitrusSpringsMapPage />
             </ProtectedRoute>
           }
         />

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
 import { ArrowLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import PrintButton from '../components/PrintButton'
-import { getHernandoZoningStyle, getHernandoFLUStyle } from '../utils/colorMaps'
+import { getCitrusZoningStyle, getCitrusFLUStyle } from '../utils/colorMaps'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -41,7 +41,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-const Level3JasmineMapPage = () => {
+const Level3PleasantGroveMapPage = () => {
   const navigate = useNavigate()
   const mapRef = useRef()
   const [loading, setLoading] = useState(true)
@@ -53,7 +53,6 @@ const Level3JasmineMapPage = () => {
   const [zoningData, setZoningData] = useState(null)
   const [topoData, setTopoData] = useState(null)
   const [wetlandsData, setWetlandsData] = useState(null)
-  const [waterPipesData, setWaterPipesData] = useState(null)
   
   // Layer visibility states - all off by default except parcel
   const [showFloodplain, setShowFloodplain] = useState(false)
@@ -61,7 +60,6 @@ const Level3JasmineMapPage = () => {
   const [showZoning, setShowZoning] = useState(false)
   const [showTopo, setShowTopo] = useState(false)
   const [showWetlands, setShowWetlands] = useState(false)
-  const [showWaterPipes, setShowWaterPipes] = useState(false)
 
   // Load all layer data when component mounts
   useEffect(() => {
@@ -69,15 +67,14 @@ const Level3JasmineMapPage = () => {
       try {
         setLoading(true)
         
-        // Load all layers in parallel
-        const [parcel, floodplain, flu, zoning, topo, wetlands, waterPipes] = await Promise.all([
-          fetch('/data/level3/Level_3_Jasmine_Parcel.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Jasmine_Floodplain.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Jasmine_FLU.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Jasmine_Zoning.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Jasmine_Topo.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Jasmine_Wetlands.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Jasmine_Water_Pipes.geojson').then(r => r.json())
+        // Load all layers in parallel - note topo is from Supabase
+        const [parcel, floodplain, flu, zoning, topo, wetlands] = await Promise.all([
+          fetch('/data/level3/Level_3_PleasantGrove_Parcels.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_PleasantGrove_Floodplain.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_PleasantGrove_FLU.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_PleasantGrove_Zoning.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_PleasantGrove_Topo_clip.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_PleasantGrove_Wetlands.geojson').then(r => r.json())
         ])
         
         setParcelData(parcel)
@@ -86,10 +83,9 @@ const Level3JasmineMapPage = () => {
         setZoningData(zoning)
         setTopoData(topo)
         setWetlandsData(wetlands)
-        setWaterPipesData(waterPipes)
         
         if (import.meta.env.DEV) {
-          console.log('All Jasmine layers loaded successfully')
+          console.log('All Pleasant Grove layers loaded successfully')
         }
       } catch (err) {
         if (import.meta.env.DEV) {
@@ -124,11 +120,43 @@ const Level3JasmineMapPage = () => {
     return { fillColor: '#87CEEB', fillOpacity: 0.3, color: '#4682B4', weight: 1 }
   }
 
-  // Topo style (contour lines)
-  const topoStyle = {
-    color: '#D2691E',  // Chocolate/orange-brown for better visibility
-    weight: 2,
-    opacity: 0.8
+  // Topo style (contour lines) - color coded by elevation
+  const topoStyle = (feature) => {
+    const elevation = feature.properties?.ELEVATION || feature.properties?.CONTOUR || 0
+    const elev = parseFloat(elevation)
+    
+    // Color code by elevation ranges
+    let color = '#D2691E' // Default chocolate brown
+    let weight = 1
+    
+    if (elev < 20) {
+      color = '#2E8B57' // Sea green (low elevation)
+      weight = 1
+    } else if (elev < 40) {
+      color = '#3CB371' // Medium sea green
+      weight = 1
+    } else if (elev < 60) {
+      color = '#90EE90' // Light green
+      weight = 1
+    } else if (elev < 80) {
+      color = '#FFD700' // Gold/yellow
+      weight = 1.5
+    } else if (elev < 100) {
+      color = '#FFA500' // Orange
+      weight = 1.5
+    } else if (elev < 120) {
+      color = '#FF8C00' // Dark orange
+      weight = 2
+    } else {
+      color = '#D2691E' // Chocolate brown (highest)
+      weight = 2
+    }
+    
+    return {
+      color: color,
+      weight: weight,
+      opacity: 0.7
+    }
   }
 
   // Wetlands style
@@ -139,20 +167,13 @@ const Level3JasmineMapPage = () => {
     weight: 2
   }
 
-  // Water pipes style
-  const waterPipesStyle = {
-    color: '#0000FF',
-    weight: 3,
-    opacity: 0.8
-  }
-
   // Popup handlers for each layer
   const onEachParcel = (feature, layer) => {
     if (feature.properties) {
       const props = feature.properties
       const popupContent = `
         <div class="p-2">
-          <h3 class="font-bold text-lg mb-2">Jasmine Parcel</h3>
+          <h3 class="font-bold text-lg mb-2">Pleasant Grove Parcel</h3>
           ${Object.entries(props).map(([key, value]) => 
             `<p><strong>${key}:</strong> ${value || 'N/A'}</p>`
           ).join('')}
@@ -172,8 +193,8 @@ const Level3JasmineMapPage = () => {
   const onEachFLU = (feature, layer) => {
     if (feature.properties) {
       const props = feature.properties
-      const flu = props.FLU || 'Unknown'
-      const label = props.LABEL || 'Unknown'
+      const flu = props.FLU || props.FLU_CODE || 'Unknown'
+      const label = props.LABEL || props.FLU_DESC || 'Unknown'
       layer.bindPopup(`
         <div class="p-2">
           <p><strong>FLU:</strong> ${flu}</p>
@@ -186,8 +207,8 @@ const Level3JasmineMapPage = () => {
   const onEachZoning = (feature, layer) => {
     if (feature.properties) {
       const props = feature.properties
-      const zoning = props.ZONING || 'Unknown'
-      const zoneDesc = props.ZONEDESC || 'Unknown'
+      const zoning = props.ZONING || props.ZONE || 'Unknown'
+      const zoneDesc = props.ZONEDESC || props.ZONE_DESC || 'Unknown'
       layer.bindPopup(`
         <div class="p-2">
           <p><strong>Zoning:</strong> ${zoning}</p>
@@ -201,19 +222,8 @@ const Level3JasmineMapPage = () => {
     if (feature.properties) {
       const elevation = feature.properties.ELEVATION || feature.properties.CONTOUR || 'Unknown'
       
-      // Add popup
+      // Add popup only - using color coding instead of labels
       layer.bindPopup(`<strong>Elevation:</strong> ${elevation} ft`)
-      
-      // Add permanent label on the contour line
-      if (elevation !== 'Unknown' && layer instanceof L.Polyline) {
-        // Create a tooltip (permanent label)
-        layer.bindTooltip(`${elevation}'`, {
-          permanent: true,
-          direction: 'center',
-          className: 'contour-label',
-          opacity: 0.9
-        })
-      }
     }
   }
 
@@ -221,21 +231,6 @@ const Level3JasmineMapPage = () => {
     if (feature.properties) {
       const wetlandType = feature.properties.WETLAND_TYPE || feature.properties.TYPE || 'Wetland'
       layer.bindPopup(`<strong>Wetland Type:</strong> ${wetlandType}`)
-    }
-  }
-
-  const onEachWaterPipe = (feature, layer) => {
-    if (feature.properties) {
-      const props = feature.properties
-      const diameter = props.DIAMETER || props.SIZE || 'Unknown'
-      const material = props.MATERIAL || 'Unknown'
-      layer.bindPopup(`
-        <div class="p-2">
-          <p><strong>Water Pipe</strong></p>
-          <p><strong>Diameter:</strong> ${diameter}</p>
-          <p><strong>Material:</strong> ${material}</p>
-        </div>
-      `)
     }
   }
 
@@ -262,9 +257,9 @@ const Level3JasmineMapPage = () => {
             <span className="text-sm font-medium">Back to Dashboard</span>
           </button>
           <h1 className="text-lg font-bold text-white">
-            Level 3 - Hernando County
+            Level 3 - Citrus County
           </h1>
-          <p className="text-sm text-blue-100">Jasmine Parcel Analysis</p>
+          <p className="text-sm text-blue-100">Pleasant Grove Parcel Analysis</p>
           
           {/* Acreage and Owner Display */}
           {parcelData && parcelData.features && parcelData.features[0] && (
@@ -389,7 +384,7 @@ const Level3JasmineMapPage = () => {
           </div>
           
           {/* Land Use & Zoning Group */}
-          <div className="border-b border-gray-200 pb-3">
+          <div>
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Land Use & Zoning</h4>
             <div className="space-y-1">
               
@@ -422,28 +417,46 @@ const Level3JasmineMapPage = () => {
               </button>
             </div>
           </div>
-          
-          {/* Infrastructure Group */}
-          <div>
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Infrastructure</h4>
-            <div className="space-y-1">
-              
-              <button
-                onClick={() => setShowWaterPipes(!showWaterPipes)}
-                className={`w-full text-left flex items-center gap-2 p-2 rounded transition-colors ${
-                  showWaterPipes 
-                    ? 'bg-blue-100 hover:bg-blue-200 border border-blue-300' 
-                    : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
-                }`}
-              >
-                <span className={`text-sm font-medium ${showWaterPipes ? 'text-blue-700' : 'text-gray-700'}`}>
-                  Water Pipes
-                </span>
-                {showWaterPipes ? <EyeIcon className="h-4 w-4 text-blue-600 ml-auto" /> : <EyeSlashIcon className="h-4 w-4 text-gray-400 ml-auto" />}
-              </button>
+        </div> {/* End of space-y-4 */}
+
+        {/* Elevation Legend - Only show when topo is visible */}
+        {showTopo && (
+          <div className="px-4 pb-4">
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-700 mb-2">Elevation Legend</h4>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-0.5" style={{ backgroundColor: '#2E8B57' }}></div>
+                  <span className="text-xs text-gray-600">&lt; 20 ft</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-0.5" style={{ backgroundColor: '#3CB371' }}></div>
+                  <span className="text-xs text-gray-600">20-40 ft</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-0.5" style={{ backgroundColor: '#90EE90' }}></div>
+                  <span className="text-xs text-gray-600">40-60 ft</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-1" style={{ backgroundColor: '#FFD700' }}></div>
+                  <span className="text-xs text-gray-600">60-80 ft</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-1" style={{ backgroundColor: '#FFA500' }}></div>
+                  <span className="text-xs text-gray-600">80-100 ft</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-1" style={{ backgroundColor: '#FF8C00' }}></div>
+                  <span className="text-xs text-gray-600">100-120 ft</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-1" style={{ backgroundColor: '#D2691E' }}></div>
+                  <span className="text-xs text-gray-600">&gt; 120 ft</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div> {/* End of space-y-4 */}
+        )}
       </div> {/* End of Map Layers Section */}
       </div> {/* End of Sidebar */}
       {/* Main Content Area - Map */}
@@ -469,7 +482,7 @@ const Level3JasmineMapPage = () => {
         {/* Map Container */}
         <MapContainer
           ref={mapRef}
-          center={[28.55, -82.55]}
+          center={[28.89, -82.45]}
           zoom={16}
           style={{ height: '100%', width: '100%' }}
           className="z-0"
@@ -520,7 +533,7 @@ const Level3JasmineMapPage = () => {
           {showFLU && fluData && (
             <GeoJSON
               data={fluData}
-              style={getHernandoFLUStyle}
+              style={getCitrusFLUStyle}
               onEachFeature={onEachFLU}
             />
           )}
@@ -529,7 +542,7 @@ const Level3JasmineMapPage = () => {
           {showZoning && zoningData && (
             <GeoJSON
               data={zoningData}
-              style={getHernandoZoningStyle}
+              style={getCitrusZoningStyle}
               onEachFeature={onEachZoning}
             />
           )}
@@ -551,19 +564,10 @@ const Level3JasmineMapPage = () => {
               onEachFeature={onEachWetlands}
             />
           )}
-
-          {/* Water Pipes Layer */}
-          {showWaterPipes && waterPipesData && (
-            <GeoJSON
-              data={waterPipesData}
-              style={waterPipesStyle}
-              onEachFeature={onEachWaterPipe}
-            />
-          )}
         </MapContainer>
       </div>
     </>
   )
 }
 
-export default Level3JasmineMapPage
+export default Level3PleasantGroveMapPage
