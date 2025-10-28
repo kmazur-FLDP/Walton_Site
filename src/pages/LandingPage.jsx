@@ -556,6 +556,66 @@ const LandingPage = () => {
                   View Parcel Analysis
                 </button>
               </motion.div>
+
+              {/* Jasmine Parcel Card */}
+              <motion.div
+                variants={itemVariants}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="card cursor-pointer hover:shadow-lg transition-all duration-200 group"
+                onClick={() => navigate('/level3/jasmine')}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center group-hover:from-accent-600 group-hover:to-accent-800 transition-all">
+                      <MapIcon className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-accent-600 transition-colors">
+                        Jasmine Parcel
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Hernando County
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Stats */}
+                <div className="bg-accent-50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-700">Data Layers</span>
+                    <span className="text-lg font-bold text-gray-900">7</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">Complete site analysis</p>
+                </div>
+                
+                {/* Features List */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    Floodplain & Wetlands
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    FLU & Zoning
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    Water Pipes
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"></div>
+                    Topography
+                  </div>
+                </div>
+                
+                {/* Action Button */}
+                <button className="w-full py-2 px-3 rounded-lg text-sm font-medium bg-accent-600 hover:bg-accent-700 text-white shadow-sm hover:shadow-md transition-all">
+                  View Parcel Analysis
+                </button>
+              </motion.div>
             </div>
           </div>
         </motion.div>

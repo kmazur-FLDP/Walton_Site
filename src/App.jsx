@@ -9,6 +9,7 @@ import PascoMapPage from './pages/PascoMapPage'
 import PolkMapPage from './pages/PolkMapPage'
 import Level2MapPage from './pages/Level2MapPage'
 import Level3CortezMapPage from './pages/Level3CortezMapPage'
+import Level3JasmineMapPage from './pages/Level3JasmineMapPage'
 import TestCitrusMap from './pages/TestCitrusMap'
 import CitrusDebugMap from './pages/CitrusDebugMap'
 import ManateeMapPage from './pages/ManateeMapPage'
@@ -152,6 +153,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <Level3CortezMapPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/level3/jasmine"
+          element={
+            <ProtectedRoute>
+              <Level3JasmineMapPage />
             </ProtectedRoute>
           }
         />

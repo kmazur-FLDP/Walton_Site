@@ -45,7 +45,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-const Level3CortezMapPage = () => {
+const Level3JasmineMapPage = () => {
   const navigate = useNavigate()
   const mapRef = useRef()
   const [loading, setLoading] = useState(true)
@@ -57,7 +57,6 @@ const Level3CortezMapPage = () => {
   const [zoningData, setZoningData] = useState(null)
   const [topoData, setTopoData] = useState(null)
   const [wetlandsData, setWetlandsData] = useState(null)
-  const [pressurePipesData, setPressurePipesData] = useState(null)
   const [waterPipesData, setWaterPipesData] = useState(null)
   
   // Layer visibility states - all off by default except parcel
@@ -66,7 +65,6 @@ const Level3CortezMapPage = () => {
   const [showZoning, setShowZoning] = useState(false)
   const [showTopo, setShowTopo] = useState(false)
   const [showWetlands, setShowWetlands] = useState(false)
-  const [showPressurePipes, setShowPressurePipes] = useState(false)
   const [showWaterPipes, setShowWaterPipes] = useState(false)
 
   // Load all layer data when component mounts
@@ -74,18 +72,16 @@ const Level3CortezMapPage = () => {
     const loadAllLayers = async () => {
       try {
         setLoading(true)
-        console.log('Loading Level 3 Cortez parcel data...')
         
         // Load all layers in parallel
-        const [parcel, floodplain, flu, zoning, topo, wetlands, pressurePipes, waterPipes] = await Promise.all([
-          fetch('/data/level3/Level_3_Cortez_Parcel.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_Floodplain.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_FLU.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_Zoning.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_Topo.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_Wetlands.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_Pressure_Pipes.geojson').then(r => r.json()),
-          fetch('/data/level3/Level_3_Cortez_Water_Pipes.geojson').then(r => r.json())
+        const [parcel, floodplain, flu, zoning, topo, wetlands, waterPipes] = await Promise.all([
+          fetch('/data/level3/Level_3_Jasmine_Parcel.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_Jasmine_Floodplain.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_Jasmine_FLU.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_Jasmine_Zoning.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_Jasmine_Topo.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_Jasmine_Wetlands.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_Jasmine_Water_Pipes.geojson').then(r => r.json())
         ])
         
         setParcelData(parcel)
@@ -94,11 +90,10 @@ const Level3CortezMapPage = () => {
         setZoningData(zoning)
         setTopoData(topo)
         setWetlandsData(wetlands)
-        setPressurePipesData(pressurePipes)
         setWaterPipesData(waterPipes)
         
         if (import.meta.env.DEV) {
-          console.log('All Cortez layers loaded successfully')
+          console.log('All Jasmine layers loaded successfully')
         }
       } catch (err) {
         if (import.meta.env.DEV) {
@@ -148,13 +143,6 @@ const Level3CortezMapPage = () => {
     weight: 2
   }
 
-  // Pressure pipes style
-  const pressurePipesStyle = {
-    color: '#FF0000',
-    weight: 3,
-    opacity: 0.8
-  }
-
   // Water pipes style
   const waterPipesStyle = {
     color: '#0000FF',
@@ -168,7 +156,7 @@ const Level3CortezMapPage = () => {
       const props = feature.properties
       const popupContent = `
         <div class="p-2">
-          <h3 class="font-bold text-lg mb-2">Cortez Parcel</h3>
+          <h3 class="font-bold text-lg mb-2">Jasmine Parcel</h3>
           ${Object.entries(props).map(([key, value]) => 
             `<p><strong>${key}:</strong> ${value || 'N/A'}</p>`
           ).join('')}
@@ -240,21 +228,6 @@ const Level3CortezMapPage = () => {
     }
   }
 
-  const onEachPressurePipe = (feature, layer) => {
-    if (feature.properties) {
-      const props = feature.properties
-      const diameter = props.DIAMETER || props.SIZE || 'Unknown'
-      const material = props.MATERIAL || 'Unknown'
-      layer.bindPopup(`
-        <div class="p-2">
-          <p><strong>Pressure Pipe</strong></p>
-          <p><strong>Diameter:</strong> ${diameter}</p>
-          <p><strong>Material:</strong> ${material}</p>
-        </div>
-      `)
-    }
-  }
-
   const onEachWaterPipe = (feature, layer) => {
     if (feature.properties) {
       const props = feature.properties
@@ -295,7 +268,7 @@ const Level3CortezMapPage = () => {
           <h1 className="text-lg font-bold text-white">
             Level 3 - Hernando County
           </h1>
-          <p className="text-sm text-blue-100">Cortez Parcel Analysis</p>
+          <p className="text-sm text-blue-100">Jasmine Parcel Analysis</p>
           
           {/* Acreage and Owner Display */}
           {parcelData && parcelData.features && parcelData.features[0] && (
@@ -460,20 +433,6 @@ const Level3CortezMapPage = () => {
             <div className="space-y-1">
               
               <button
-                onClick={() => setShowPressurePipes(!showPressurePipes)}
-                className={`w-full text-left flex items-center gap-2 p-2 rounded transition-colors ${
-                  showPressurePipes 
-                    ? 'bg-blue-100 hover:bg-blue-200 border border-blue-300' 
-                    : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
-                }`}
-              >
-                <span className={`text-sm font-medium ${showPressurePipes ? 'text-blue-700' : 'text-gray-700'}`}>
-                  Pressure Pipes
-                </span>
-                {showPressurePipes ? <EyeIcon className="h-4 w-4 text-blue-600 ml-auto" /> : <EyeSlashIcon className="h-4 w-4 text-gray-400 ml-auto" />}
-              </button>
-              
-              <button
                 onClick={() => setShowWaterPipes(!showWaterPipes)}
                 className={`w-full text-left flex items-center gap-2 p-2 rounded transition-colors ${
                   showWaterPipes 
@@ -597,15 +556,6 @@ const Level3CortezMapPage = () => {
             />
           )}
 
-          {/* Pressure Pipes Layer */}
-          {showPressurePipes && pressurePipesData && (
-            <GeoJSON
-              data={pressurePipesData}
-              style={pressurePipesStyle}
-              onEachFeature={onEachPressurePipe}
-            />
-          )}
-
           {/* Water Pipes Layer */}
           {showWaterPipes && waterPipesData && (
             <GeoJSON
@@ -620,4 +570,4 @@ const Level3CortezMapPage = () => {
   )
 }
 
-export default Level3CortezMapPage
+export default Level3JasmineMapPage

@@ -14,6 +14,10 @@ dist-ssr
 
 .env
 
+# Large GeoJSON files (stored in Supabase instead)
+public/data/level3/Level_3_PleasantGrove_Topo.geojson
+public/data/level3/Level_3_CitrusSprings_Topo.geojson
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
