@@ -73,7 +73,7 @@ const Level3CitrusSpringsMapPage = () => {
           fetch('/data/level3/Level_3_CitrusSprings_Floodplain.geojson').then(r => r.json()),
           fetch('/data/level3/Level_3_CitrusSprings_FLU.geojson').then(r => r.json()),
           fetch('/data/level3/Level_3_CitrusSprings_Zoning.geojson').then(r => r.json()),
-          fetch('https://qitnaardmorozyzlcelp.supabase.co/storage/v1/object/public/topo/Level_3_CitrusSprings_Topo.geojson').then(r => r.json()),
+          fetch('/data/level3/Level_3_CitrusSprings_Topo_clip.geojson').then(r => r.json()),
           fetch('/data/level3/Level_3_CitrusSprings_Wetlands.geojson').then(r => r.json())
         ])
         

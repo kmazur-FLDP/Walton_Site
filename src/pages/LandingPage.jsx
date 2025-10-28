@@ -495,8 +495,8 @@ const LandingPage = () => {
             Detailed parcel-level analysis with comprehensive site-specific data layers
           </motion.p>
           
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Cortez Parcel Card */}
               <motion.div
                 variants={itemVariants}
